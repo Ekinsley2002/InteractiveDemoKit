@@ -25,7 +25,8 @@ class AfmPageWidget(QWidget):
             self.setStyleSheet(f.read())
 
         # ── CONFIG ────────────────────────────────
-        self.PORT = "/dev/cu.usbmodem14101"
+        #self.PORT = "/dev/cu.usbmodem14101"
+        self.PORT = "COM3"
         self.BAUD = 115_200
 
         self.INIT_Y_MINMAX = (0, 0.5)

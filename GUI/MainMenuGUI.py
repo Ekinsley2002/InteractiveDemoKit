@@ -38,6 +38,13 @@ class MenuPage(QWidget):
         self.afm_btn.setObjectName("AfmBtn")
         lay.addWidget(self.afm_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
+        lay.addSpacing(12) 
+
+        # secondary → AFM page
+        self.pwrpng_btn = QPushButton("Power Pong Game")
+        self.pwrpng_btn.setObjectName("PwrPngBtn")
+        lay.addWidget(self.pwrpng_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+
 
         lay.addStretch()    
 
