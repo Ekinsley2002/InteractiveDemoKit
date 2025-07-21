@@ -2,9 +2,10 @@
 import sys
 import pathlib
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
-from GUI.MainMenu    import MenuPage
+from GUI.MainMenuGUI   import MenuPage
 from GUI.AfmGUI      import AfmPageWidget
 from GUI.TopographyGUI import TopographyPageWidget
+from GUI.PowerPongGUI import PowerPongPageWidget
 
 
 class MainWindow(QMainWindow):
@@ -49,11 +50,26 @@ class MainWindow(QMainWindow):
             lambda: self.stack.setCurrentWidget(self.afm_page)
         )
 
+        # page 3 → Power Pong Page
+        self.power_pong_page = PowerPongPageWidget()
+        self.stack.addWidget(self.power_pong_page)
+        
+        self.menu_page.pwrpng_btn.clicked.connect(
+            lambda: self.stack.setCurrentWidget(self.power_pong_page)
+        )
+
+        self.power_pong_page.back_requested.connect(
+            lambda: self.stack.setCurrentWidget(self.menu_page)
+        )
+
+        # page 4 → PID Control Page
+
         # start on the menu
         self.stack.setCurrentWidget(self.menu_page)
 
 
 def main():
+
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
