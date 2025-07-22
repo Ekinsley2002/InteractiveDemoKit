@@ -1,7 +1,57 @@
+/* ─────────────  PAGE BACKGROUND  ───────────── */
 QWidget#PowerPongPage {
     background: qlineargradient(
-        x1:0, y1:0,  x2:0, y2:1,
-        stop:0   #75638F,
-        stop:1   #59496F
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 #75638F,
+        stop:1 #59496F
     );
 }
+
+/* ─────────────  TITLE  ───────────── */
+QLabel#Title {
+    color:#CEF9F2;
+    font:600 32px "Roboto";
+}
+
+/* ─────────────  VALUE  ───────────── */
+QLabel#ValueDisplay {
+    color:#CEF9F2;
+    font:600 34px "Roboto";
+    padding:6px 24px;
+    background:rgba(255,255,255,0.05);
+    border:2px solid #AB92BF;
+    border-radius:12px;
+}
+
+/* ─────────────  ARROW BUTTONS  ───────────── */
+QPushButton#ArrowBtn {
+    background:rgba(255,255,255,0.05);
+    border:2px solid #AB92BF;
+    border-radius:12px;
+}
+QPushButton#ArrowBtn:hover  { background:rgba(255,255,255,0.10); border-color:#BFA0D0; }
+QPushButton#ArrowBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#9D7EC0; }
+
+/* ─────────────  BACK BUTTON  ───────────── */
+QPushButton#BackBtn {
+    color:#CEF9F2;
+    font:600 22px "Roboto";
+    padding:6px 32px;
+    background:rgba(255,255,255,0.05);
+    border:2px solid #AB92BF;
+    border-radius:12px;
+}
+QPushButton#BackBtn:hover  { background:rgba(255,255,255,0.10); border-color:#BFA0D0; }
+QPushButton#BackBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#9D7EC0; }
+
+/* ─────────────  FORE! button  ───────────── */
+QPushButton#ForeBtn {
+    color:#CEF9F2;
+    font:600 26px "Roboto";
+    padding:8px 36px;
+    background:rgba(255,255,255,0.05);
+    border:2px solid #AB92BF;
+    border-radius:12px;
+}
+QPushButton#ForeBtn:hover  { background:rgba(255,255,255,0.10); border-color:#BFA0D0; }
+QPushButton#ForeBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#9D7EC0; }

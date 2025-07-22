@@ -12,7 +12,7 @@ QWidget#CentralArea {
 /* ∎ Headline banner */
 QLabel#IntroLabel {
     color:  #CEF9F2;
-    font:   600 26px "Roboto";
+    font:   600 40px "Roboto";
     padding: 8px 20px;
     background: rgba(255,255,255,0.10);
     border: 2px solid #AB92BF;
@@ -24,7 +24,7 @@ QLabel#IntroLabel {
 /* ∎ Base style for EVERY button on the page */
 QWidget#CentralArea QPushButton {
     color:  #CEF9F2;
-    font:   600 18px "Roboto";
+    font:   600 25px "Roboto";
     padding: 8px 24px;
     background: rgba(255,255,255,0.05);
     border: 2px solid #AB92BF;
@@ -43,5 +43,5 @@ QWidget#CentralArea QPushButton:pressed {
 
 /* ∎ Button‑specific tweaks */
 QPushButton#AfmBtn {
-    max-width: 320px;         /* narrower than banner for focus */
+    max-width: 320px; 
 }

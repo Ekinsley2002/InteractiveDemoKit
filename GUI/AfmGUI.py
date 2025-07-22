@@ -15,19 +15,16 @@ class AfmPageWidget(QWidget):
     back_requested = pyqtSignal()
     map_requested = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, ser, parent=None):
         super().__init__(parent)
+
+        self.ser = ser
 
         self.setObjectName("AfmPage")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         with open("Styles/styleAfmPage.qss", "r") as f:
             self.setStyleSheet(f.read())
-
-        # ── CONFIG ────────────────────────────────
-        #self.PORT = "/dev/cu.usbmodem14101"
-        self.PORT = "COM3"
-        self.BAUD = 115_200
 
         self.INIT_Y_MINMAX = (0, 0.5)
         self.AUTO_TRIP_DEG = 2.0
@@ -43,9 +40,6 @@ class AfmPageWidget(QWidget):
         self.RECORD_DURATION = 10
         self.MAX_VALUES_PER_TRIAL = 100
         self.TRIAL_FILE = "trials.txt"
-
-        # ── Serial ────────────────────────────────
-        self.init_serial()
 
         # ── GUI Setup ─────────────────────────────
         layout = QVBoxLayout(self)
@@ -119,11 +113,6 @@ class AfmPageWidget(QWidget):
         self.timer.timeout.connect(self.update)
         self.timer.start(self.TIMER_MS)
 
-    def init_serial(self):
-        if hasattr(self, 'ser') and self.ser.is_open:
-            self.ser.close()
-        self.ser = serial.Serial(self.PORT, self.BAUD, timeout=0)
-
     def load_trials(self):
         if os.path.exists(self.TRIAL_FILE):
             with open(self.TRIAL_FILE, "r") as f:
@@ -166,22 +155,22 @@ class AfmPageWidget(QWidget):
                 self.stop_recording()
                 
     def _full_reset(self):
-        """Clear plot data, zero the clock, and close the serial port."""
-        if self.ser and self.ser.is_open:
-            self.ser.close()
+        """Clear plot data and zero the clock (leave port open)."""
 
         self.data_t.clear()
         self.data_deg.clear()
         self.t0       = None
         self.deg_filt = 0.0
         self.curve.clear()
-        # (leave trial counters alone – they reflect trials.txt)
 
     def _resume_if_needed(self):
-        """Called when the page becomes visible. Re-init only if stopped."""
-        if not self.timer.isActive():          # means we left to menu before
-            self.init_serial()                 # reopen USB
-            self.timer.start(self.TIMER_MS)    # resume periodic updates
+        """Called by showEvent – rearm everything when page is shown."""
+        if not self.timer.isActive():
+            self.ser.reset_input_buffer()    # drop whatever accumulated
+            self._full_reset()               # fresh graph
+            self.ser.write(b"\x01")          # AFM = 1  ➜ start stream
+            self.ser.flush()
+            self.timer.start(self.TIMER_MS)
 
     def start_recording(self):
         if self.trial_index >= self.MAX_TRIALS:
@@ -206,15 +195,16 @@ class AfmPageWidget(QWidget):
         self.map_requested.emit()
 
     def showEvent(self, event):
-        self._resume_if_needed()       # ← add this line
+        self._resume_if_needed()
         super().showEvent(event)
 
     def go_back(self):
+        """User hit Back -> stop stream & switch to menu."""
         self.timer.stop()
+        self.ser.write(b"\x00")          # MAIN_MENU  = 0  ➜ pause Arduino
+        self.ser.flush()
         self._full_reset()
         self.back_requested.emit()
 
     def closeEvent(self, event):
-        if self.ser and self.ser.is_open:
-            self.ser.close()
         super().closeEvent(event)
