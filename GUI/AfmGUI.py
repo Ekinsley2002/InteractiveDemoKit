@@ -61,10 +61,6 @@ class AfmPageWidget(QWidget):
                                         "bottom": "time (s)"})
         self.plot.setYRange(*self.INIT_Y_MINMAX, padding=0)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
-
-        orange_line = pg.InfiniteLine(pos=0.03, angle=0,
-                                    pen=pg.mkPen("orange", width=2))
-        self.plot.addItem(orange_line)
         self.curve = self.plot.plot(pen="y")
 
         # 2) Create Back button *with graph_holder as its parent* and

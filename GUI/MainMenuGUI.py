@@ -1,37 +1,48 @@
-# menu_page.py  (new file, or inline class)
+# menu_page.py  – only the top portion needs editing
+from pathlib import Path                        # ← NEW
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt
 from PyQt6.QtGui     import QPixmap
 
+
 class MenuPage(QWidget):
     def __init__(self, ser, parent=None):
         super().__init__(parent)
-        
-        self.ser = ser 
+        self.ser = ser
 
-        self.setObjectName("CentralArea")                      
+        self.setObjectName("CentralArea")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        with open("Styles/styleMainPage.qss", "r") as f:
-                    self.setStyleSheet(f.read())
+        with open("Styles/styleMainPage.qss") as f:
+            self.setStyleSheet(f.read())
 
         lay = QVBoxLayout(self)
-        lay.setSpacing(16)
+        lay.setSpacing(20)
 
-        # logo
+        # ───────── LOGO ─────────
+        base_dir = Path(__file__).resolve().parent.parent     # folder where menu_page.py lives
+        logo_path = base_dir / "images" / "logo.png"   # works on Windows & Linux
+
         logo_lbl = QLabel()
-        logo_lbl.setPixmap(
-            QPixmap("images/logo.png")
-            .scaledToWidth(150, Qt.TransformationMode.SmoothTransformation)
-        )
+        pix = QPixmap(str(logo_path))                  # always pass str(…) to Qt
+        if not pix.isNull():                          # file found – show it
+            pix = pix.scaledToWidth(
+                90, Qt.TransformationMode.SmoothTransformation
+            )
+            logo_lbl.setPixmap(pix)
+        else:                                         # fallback: text placeholder
+            logo_lbl.setText("[ logo.png not found ]")
+            logo_lbl.setStyleSheet("color:#CEF9F2; font:600 18px 'Roboto';")
+
         logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(logo_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # headline banner
+        # ───────── HEADLINE ─────────
         headline = QLabel("Welcome to the Interactive Demo Kit!")
         headline.setObjectName("IntroLabel")
         headline.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(headline, alignment=Qt.AlignmentFlag.AlignHCenter)
+
 
         lay.addSpacing(18) 
 

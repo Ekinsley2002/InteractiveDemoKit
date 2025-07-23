@@ -1,92 +1,121 @@
-# Imports
+# power_pong_page.py  – full path-safe version
+from pathlib import Path
+
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QPushButton
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 )
-from PyQt6.QtCore    import Qt, pyqtSignal, QSize
-from PyQt6.QtGui     import QIcon, QCursor
+from PyQt6.QtCore import Qt, QSize, pyqtSignal
+from PyQt6.QtGui  import QIcon, QCursor
 
 
+# -------------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parent.parent   # …/InteractiveDemoKitV2-1
+IMAGES_DIR   = PROJECT_ROOT / "images"
+STYLES_DIR   = PROJECT_ROOT / "Styles"
+
+
+# ────────────────────────────────────────────────────────────────
+class Picker(QWidget):
+    """One vertical picker column with ▲ / ▼ / Add."""
+    value_added = pyqtSignal(int)
+
+    COL_W = 200
+
+    def __init__(self, title: str, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._value = 0
+
+        v = QVBoxLayout(self)
+        v.setSpacing(12)
+        v.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        title_lbl = QLabel(title, alignment=Qt.AlignmentFlag.AlignCenter)
+        title_lbl.setObjectName("PickerTitle")
+        title_lbl.setFixedWidth(self.COL_W)
+
+        self.value_lbl = QLabel("0", alignment=Qt.AlignmentFlag.AlignCenter)
+        self.value_lbl.setObjectName("ValueDisplay")
+        self.value_lbl.setFixedSize(self.COL_W, 64)
+
+        up_btn   = self._make_arrow("arrow_up.png",   +1)
+        down_btn = self._make_arrow("arrow_down.png", -1)
+
+        add_btn  = QPushButton("Add")
+        add_btn.setObjectName("AddBtn")
+        add_btn.setFixedSize(120, 44)
+        add_btn.clicked.connect(self._emit_add)
+
+        v.addWidget(title_lbl)
+        v.addWidget(up_btn)
+        v.addWidget(self.value_lbl)
+        v.addWidget(down_btn)
+        v.addStretch(1)
+        v.addWidget(add_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+    # helpers ------------------------------------------------------
+    def _make_arrow(self, filename: str, delta: int) -> QPushButton:
+        path = IMAGES_DIR / filename
+        btn  = QPushButton()
+        btn.setObjectName("ArrowBtn")
+        btn.setIcon(QIcon(str(path)))
+        btn.setIconSize(QSize(40, 40))
+        btn.setFixedSize(self.COL_W, 64)
+        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn.clicked.connect(lambda: self._bump(delta))
+        return btn
+
+    def _bump(self, delta: int):
+        self._value += delta
+        self.value_lbl.setText(str(self._value))
+
+    def _emit_add(self):
+        self.value_added.emit(self._value)
+
+
+# ────────────────────────────────────────────────────────────────
 class PowerPongPageWidget(QWidget):
     back_requested = pyqtSignal()
-    valueChanged   = pyqtSignal(int)          # emits on every bump
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
-        # give QSS something to target
         self.setObjectName("PowerPongPage")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        # GLOBAL PAGE LAYOUT ─────────────────────────────────────────
-        layout = QVBoxLayout(self)
-        layout.setSpacing(24)
+        root = QVBoxLayout(self)
 
         title = QLabel("Power Pong Game", alignment=Qt.AlignmentFlag.AlignCenter)
         title.setObjectName("Title")
-        layout.addWidget(title)
+        root.addWidget(title)
 
-        # VALUE PICKER ───────────────────────────────────────────────
-        picker_layout = QVBoxLayout()
-        picker_layout.setSpacing(8)
-        picker_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        # ───────── PICKERS + FORE ROW ─────────
+        row = QHBoxLayout()
+        row.setSpacing(40)
 
-        # internal state
-        self._value, self._min, self._max, self._step = 0, 0, 99, 1
+        self.speed_picker  = Picker("Speed")
+        self.offset_picker = Picker("Offset")
 
-        # numeric display
-        self.display = QLabel(str(self._value), alignment=Qt.AlignmentFlag.AlignCenter)
-        self.display.setObjectName("ValueDisplay")
-        self.display.setFixedWidth(90)
+        self.speed_picker.value_added.connect(lambda v: print("Speed added:",  v))
+        self.offset_picker.value_added.connect(lambda v: print("Offset added:", v))
 
-        # helper: arrow button factory
-        def make_arrow(path: str, obj_name: str) -> QPushButton:
-            btn = QPushButton()
-            btn.setObjectName(obj_name)                # ArrowBtn
-            btn.setIcon(QIcon(path))
-            btn.setIconSize(QSize(40, 40))
-            btn.setFixedSize(64, 64)
-            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            return btn
+        row.addStretch(1)
+        row.addWidget(self.speed_picker)
+        row.addWidget(self.offset_picker)
+        row.addStretch(1)
 
-        up_btn   = make_arrow("images/arrow_up.png",   "ArrowBtn")
-        down_btn = make_arrow("images/arrow_down.png", "ArrowBtn")
-
-        up_btn.clicked.connect(lambda: self._bump(+self._step))
-        down_btn.clicked.connect(lambda: self._bump(-self._step))
-
-        picker_layout.addWidget(up_btn)
-        picker_layout.addWidget(self.display)
-        picker_layout.addWidget(down_btn)
-        layout.addLayout(picker_layout, stretch=1)
-
-
-        # ── FORE! button (does nothing for now) ─────────────────────
         fore_btn = QPushButton("FORE!")
         fore_btn.setObjectName("ForeBtn")
-        # you can connect later:  fore_btn.clicked.connect(self.some_slot)
-        layout.addWidget(fore_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        row.addWidget(fore_btn)
 
-        # ── back button ─────────────────────────────────────────────
-        back_btn = QPushButton("Back")
+        row.addStretch(1)
+        root.addLayout(row, stretch=1)
 
-        # BACK BUTTON ────────────────────────────────────────────────
+        # ───────── BACK ─────────
         back_btn = QPushButton("Back")
         back_btn.setObjectName("BackBtn")
         back_btn.clicked.connect(self.back_requested.emit)
-        layout.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        root.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # finally load QSS for this page
-        with open("Styles/stylePowerPongPage.qss") as f:
-            self.setStyleSheet(f.read())
-
-    # ---------------------------------------------------------------
-    # helpers
-    def _bump(self, delta: int):
-        new_val = self._value + delta
-        if self._min <= new_val <= self._max:
-            self._value = new_val
-            self.display.setText(str(self._value))
-            self.valueChanged.emit(self._value)
-
-    def value(self) -> int:
-        return self._value
+        # ───────── QSS ─────────
+        css_file = STYLES_DIR / "stylePowerPongPage.qss"
+        self.setStyleSheet(css_file.read_text())
