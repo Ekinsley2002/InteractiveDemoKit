@@ -1,43 +1,42 @@
 /* ───────────────────────────  MAIN PAGE  ─────────────────────────── */
 
 QWidget#CentralArea {
-    background: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #FAC01A 
-        stop:1 #002454 
-    );
+    background:#002454 
 }
 
 /* ∎ Headline banner */
 QLabel#IntroLabel {
     color:#FFFFFF;
-    font:600 40px "Roboto";
-    padding:8px 20px;
+    font:600 28px "Roboto";  /* Reduced from 40px to fit better */
+    padding:6px 16px;         /* Reduced padding to save space */
     background:rgba(255,255,255,0.10);
-    border:2px solid #596157;
+    border:2px solid #FAC01A;
     border-radius:12px;
+    max-width: 780px;         /* Ensure it doesn't exceed window width */
+    word-wrap: break-word;    /* Allow text to wrap if needed */
 }
 
 /* ∎ Base style for EVERY button on the page */
 QWidget#CentralArea QPushButton {
     color:#FFFFFF;
-    font:600 25px "Roboto";
-    padding:8px 24px;
+    font:600 22px "Roboto";  /* Reduced from 25px to fit better */
+    padding:6px 20px;         /* Reduced padding to save space */
     background:rgba(255,255,255,0.05);
-    border:2px solid #596157;
+    border:2px solid #FAC01A;
     border-radius:12px;
 
     /* ★ guarantee plenty of room for long labels                */
-    min-width:360px;      /* fits "Atomic Force Microscope" at 25 pt */
-    max-width:none;       /* let it expand further if window allows */
+    min-width: 700px;     /* Increased to fit "Control and Feedback Tuning" */
+    max-width: 780px;     /* Ensure buttons don't exceed window width */
+    text-align: center;   /* Center text within buttons */
 }
 
 /*   ── shared hover / pressed states ──   */
 QWidget#CentralArea QPushButton:hover  {
     background:rgba(255,255,255,0.10);
-    border-color:#7F7979;
+    border-color:#FAC01A;
 }
 QWidget#CentralArea QPushButton:pressed{
     background:rgba(255,255,255,0.14);
-    border-color:#7F7979;
+    border-color:#FAC01A;
 }

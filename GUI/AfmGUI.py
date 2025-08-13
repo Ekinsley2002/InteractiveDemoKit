@@ -54,6 +54,7 @@ class AfmPageWidget(QWidget):
         gh_layout.setContentsMargins(0, 0, 0, 0)
 
         win = pg.GraphicsLayoutWidget(title="Gimbal angle (°)")
+        win.setBackground('w')  # Set the entire GraphicsLayoutWidget background to white
         gh_layout.addWidget(win)                       # add plot to holder
         layout.addWidget(graph_holder)                 # add holder to page
 
@@ -61,17 +62,48 @@ class AfmPageWidget(QWidget):
                                         "bottom": "time (s)"})
         self.plot.setYRange(*self.INIT_Y_MINMAX, padding=0)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
+        
+        # Set text and axis colors to black for better visibility on white background
+        self.plot.getAxis('left').setTextPen('k')  # Y-axis text in black
+        self.plot.getAxis('bottom').setTextPen('k')  # X-axis text in black
+        self.plot.getAxis('left').setPen('k')  # Y-axis line in black
+        self.plot.getAxis('bottom').setPen('k')  # X-axis line in black
+        
         self.curve = self.plot.plot(pen="y")
 
         # 2) Create Back button *with graph_holder as its parent* and
         #    position it manually.
         self.back_button = QPushButton("Back", graph_holder)
+        self.back_button.setObjectName("back_button")   # Set object name for CSS styling
         self.back_button.setFixedSize(70, 28)          # optional – keeps it tidy
         self.back_button.move(675, 10)                  # 10 px from top-left
         self.back_button.raise_()                      # make sure it’s on top
         self.back_button.clicked.connect(self.go_back)
 
-        # 3) The rest of the controls stay in the main vertical layout
+        # 3) Create floating trial info container positioned under the back button
+        trial_container = QWidget(self)
+        trial_container.setObjectName("TrialContainer")
+        trial_container.setFixedSize(150, 60)
+        trial_container.setStyleSheet("background-color: rgba(0, 36, 84, 0.8); border-radius: 8px;")
+        
+        # Add trial labels to the container
+        trial_layout = QVBoxLayout(trial_container)
+        trial_layout.setContentsMargins(8, 8, 8, 8)
+        trial_layout.setSpacing(4)
+        
+        self.trial_label = QLabel("Current Trial: 0 / 4")
+        self.trial_label.setStyleSheet("color: #FFFFFF; font: 600 14px 'Roboto'; background-color: transparent;")
+        trial_layout.addWidget(self.trial_label)
+        
+        self.trial_counter = QLabel("Awaiting start...")
+        self.trial_counter.setStyleSheet("color: #FFFFFF; font: 600 14px 'Roboto'; background-color: transparent;")
+        trial_layout.addWidget(self.trial_counter)
+        
+        # Position the trial container under the back button area
+        trial_container.move(628, 60)  # Same X as back button, below it
+        trial_container.raise_()        # Ensure it's on top of the graph
+
+        # 4) The rest of the controls stay in the main vertical layout
         self.record_button = QPushButton("Record")
         layout.addWidget(self.record_button)
 
@@ -81,12 +113,11 @@ class AfmPageWidget(QWidget):
         self.clear_trial_file_button = QPushButton("Clear Trials")
         layout.addWidget(self.clear_trial_file_button)
 
+        self.show_references_button = QPushButton("Show References")
+        layout.addWidget(self.show_references_button)
 
-        self.trial_label = QLabel("Current Trial: 0 / 10")
-        layout.addWidget(self.trial_label)
-
-        self.trial_counter = QLabel("Awaiting start...")
-        layout.addWidget(self.trial_counter)
+        self.guess_samples_button = QPushButton("Guess Samples")
+        layout.addWidget(self.guess_samples_button)
 
         # ── State Variables ───────────────────────
         self.data_t, self.data_deg = [], []

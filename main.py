@@ -11,7 +11,7 @@ os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
 os.environ["QT_SCALE_FACTOR"]            = "1"
 os.environ["QT_ENABLE_HIGHDPI_SCALING"]  = "0"
 
-from PyQt6.QtCore import Qt, QCoreApplication
+from PyQt6.QtCore import Qt, QCoreApplication, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt6.QtGui import QCursor
 
@@ -21,6 +21,7 @@ from GUI.AfmGUI        import AfmPageWidget
 from GUI.TopographyGUI import TopographyPageWidget
 from GUI.PowerPongGUI  import PowerPongPageWidget
 from GUI.MotorFunGUI    import MotorFunPageWidget
+from Animation.StartupAnimation import StartupAnimation
 
 
 class MainWindow(QMainWindow):
@@ -39,6 +40,9 @@ class MainWindow(QMainWindow):
             self.showFullScreen()
             self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
 
+        elif Config.DEVICE == "Windows":
+            self.PORT = "COM3"
+
         # Check to see if using board, if not, set up fake serial
         if Config.BOARDLESS:
             self.ser = serial.serial_for_url("loop://", timeout=1)
@@ -54,8 +58,44 @@ class MainWindow(QMainWindow):
 
         # ── stacked-page container ──────────────────────────────────
         self.stack = QStackedWidget(self)
-        self.setCentralWidget(self.stack)
+        
+        # Set the main window background to blue
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #002454;
+            }
+        """)
+        
+        # Start with startup animation as the central widget
+        self.startup_animation = StartupAnimation()
+        self.startup_animation.animation_complete.connect(self.transition_to_main_menu)
+        self.setCentralWidget(self.startup_animation)
+        
+        # Start the startup animation
+        self.startup_animation.start_animation()
 
+        # Don't create main menu pages yet - wait until startup animation completes
+        # This prevents the white circle and other elements from bleeding through
+        self.menu_page = None
+        self.afm_page = None
+        self.topo_page = None
+        self.power_pong_page = None
+        self.motor_fun_page = None
+
+        # Don't show the main menu immediately - wait for startup animation
+        # self.stack.setCurrentWidget(self.menu_page)  # Commented out
+
+    def transition_to_main_menu(self):
+        """Seamlessly transition from startup animation to main menu"""
+        # Create all main menu pages now (after startup animation completes)
+        self.create_main_menu_pages()
+        
+        # Replace the startup animation with the main menu stack
+        self.setCentralWidget(self.stack)
+        self.stack.setCurrentWidget(self.menu_page)
+    
+    def create_main_menu_pages(self):
+        """Create all main menu pages and set up navigation"""
         # page 0 → main menu
         self.menu_page = MenuPage(self.ser)
         self.stack.addWidget(self.menu_page)
@@ -103,14 +143,12 @@ class MainWindow(QMainWindow):
             lambda: self.stack.setCurrentWidget(self.menu_page)
         )
 
-        # show the main menu first
-        self.stack.setCurrentWidget(self.menu_page)
-
 
 def main():
     app = QApplication(sys.argv)
     window = MainWindow()
-    window.show()                 # or window.showFullScreen() as noted
+    # Show the main window immediately - it will display the startup animation first
+    window.show()
     sys.exit(app.exec())
 
 

@@ -1,7 +1,39 @@
 QWidget#AfmPage {
-    background: qlineargradient(
-        x1:0, y1:0, x2:0, y2:1,
-        stop:0 #002454,   /* deep mauve */
-        stop:1 #FAC01A    /* light purple */
-    );
+    background: #002454
+}
+
+/* ∎ Base style for ALL buttons on the AFM page - matching main menu */
+QWidget#AfmPage QPushButton {
+    color: #FFFFFF;
+    font: 600 22px "Roboto";
+    padding: 6px 20px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #FAC01A;
+    border-radius: 12px;
+    min-width: 700px;
+    max-width: 780px;
+    text-align: center;
+}
+
+/* ∎ Hover state */
+QWidget#AfmPage QPushButton:hover {
+    background: rgba(255,255,255,0.10);
+    border-color: #FAC01A;
+}
+
+/* ∎ Pressed state */
+QWidget#AfmPage QPushButton:pressed {
+    background: rgba(255,255,255,0.14);
+    border-color: #FAC01A;
+}
+
+/* ∎ Special styling for the back button */
+QWidget#AfmPage QPushButton#back_button {
+    background: #002454;
+    border: 2px solid #002454;
+    color: #FFFFFF;
+    font: 600 18px "Roboto";
+    min-width: 70px;
+    max-width: 70px;
+    padding: 4px 8px;
 }

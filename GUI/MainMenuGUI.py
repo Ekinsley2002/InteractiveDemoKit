@@ -1,3 +1,4 @@
+
 # menu_page.py  – only the top portion needs editing
 from pathlib import Path                        # ← NEW
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
@@ -17,24 +18,28 @@ class MenuPage(QWidget):
             self.setStyleSheet(f.read())
 
         lay = QVBoxLayout(self)
-        lay.setSpacing(20)
-
-        # ───────── LOGO ─────────
+        lay.setSpacing(16)  # Reduced from 20 to save space
+        lay.setContentsMargins(0, 0, 0, 0)  # Remove margins to prevent white areas
+        
+                # ───────── LOGO ─────────
         base_dir = Path(__file__).resolve().parent.parent     # folder where menu_page.py lives
-        logo_path = base_dir / "images" / "logo.png"   # works on Windows & Linux
+        logo_path = base_dir / "images" / "logoBackground.png"   # works on Windows & Linux
 
         logo_lbl = QLabel()
         pix = QPixmap(str(logo_path))                  # always pass str(…) to Qt
         if not pix.isNull():                          # file found – show it
             pix = pix.scaledToWidth(
-                130, Qt.TransformationMode.SmoothTransformation
+                390, Qt.TransformationMode.SmoothTransformation
             )
             logo_lbl.setPixmap(pix)
         else:                                         # fallback: text placeholder
-            logo_lbl.setText("[ logo.png not found ]")
+            logo_lbl.setText("[ logoBackground.png not found ]")
             logo_lbl.setStyleSheet("color:#CEF9F2; font:600 18px 'Roboto';")
 
         logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_lbl.setStyleSheet("background-color: transparent;")  # Ensure logo has no background
+        
+        # Add the logo directly to the main layout
         lay.addWidget(logo_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # ───────── HEADLINE ─────────
@@ -44,7 +49,7 @@ class MenuPage(QWidget):
         lay.addWidget(headline, alignment=Qt.AlignmentFlag.AlignHCenter)
 
 
-        lay.addSpacing(18) 
+        lay.addSpacing(12)  # Reduced from 18 to save space
 
         # primary button → AFM page
         self.afm_btn = QPushButton("Atomic Force Microscope")
@@ -52,7 +57,7 @@ class MenuPage(QWidget):
         lay.addWidget(self.afm_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
         self.afm_btn.clicked.connect(self.on_afm_btn_clicked)
 
-        lay.addSpacing(12) 
+        lay.addSpacing(10)  # Reduced from 12 to save space
 
         # secondary → AFM page
         self.pwrpng_btn = QPushButton("Power Pong!")
@@ -60,14 +65,14 @@ class MenuPage(QWidget):
         lay.addWidget(self.pwrpng_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
         self.pwrpng_btn.clicked.connect(self.on_pwer_png_clicked)
 
-        lay.addSpacing(12) 
+        lay.addSpacing(10)  # Reduced from 12 to save space
 
         # tertiary -> Motor Fun page
         self.mtrfun_btn = QPushButton("Control and Feedback Tuning")
         self.mtrfun_btn.setObjectName("MtrFunBtn")
         lay.addWidget(self.mtrfun_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        lay.addSpacing(12) 
+        lay.addSpacing(10)  # Reduced from 12 to save space 
 
         lay.addStretch()    
     
