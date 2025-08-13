@@ -1,15 +1,11 @@
-# power_pong_page.py  – full path-safe version
+# power_pong_page.py
 from pathlib import Path
-
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-)
-from PyQt6.QtCore import Qt, QSize, pyqtSignal
-from PyQt6.QtGui  import QIcon, QCursor
-
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtCore    import Qt, QSize, pyqtSignal
+from PyQt6.QtGui     import QIcon, QCursor
 
 # -------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent.parent   # …/InteractiveDemoKitV2-1
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMAGES_DIR   = PROJECT_ROOT / "images"
 STYLES_DIR   = PROJECT_ROOT / "Styles"
 
@@ -17,7 +13,7 @@ STYLES_DIR   = PROJECT_ROOT / "Styles"
 # ────────────────────────────────────────────────────────────────
 class Picker(QWidget):
     """One vertical picker column with ▲ / ▼ / Add."""
-    value_added = pyqtSignal(int)
+    value_added = pyqtSignal(int)          # emits the *current* value
 
     COL_W = 200
 
@@ -65,8 +61,9 @@ class Picker(QWidget):
         return btn
 
     def _bump(self, delta: int):
-        self._value += delta
-        self.value_lbl.setText(str(self._value))
+        if 0 <= self._value + delta <= 50:
+            self._value += delta
+            self.value_lbl.setText(str(self._value))
 
     def _emit_add(self):
         self.value_added.emit(self._value)
@@ -74,10 +71,20 @@ class Picker(QWidget):
 
 # ────────────────────────────────────────────────────────────────
 class PowerPongPageWidget(QWidget):
+    """
+    Shows the Power-Pong controls and forwards user actions to the Arduino
+    via SimpleFOC Commander.
+
+    Parameters
+    ----------
+    ser : serial.Serial-like object
+        Must support .write(bytes) and .flush(); pass None for boardless mode.
+    """
     back_requested = pyqtSignal()
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, ser, parent: QWidget | None = None):
         super().__init__(parent)
+        self.ser = ser                      # <- remember the port (can be None)
 
         self.setObjectName("PowerPongPage")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -89,14 +96,14 @@ class PowerPongPageWidget(QWidget):
         root.addWidget(title)
 
         # ───────── PICKERS + FORE ROW ─────────
-        row = QHBoxLayout()
-        row.setSpacing(40)
+        row = QHBoxLayout(); row.setSpacing(40)
 
         self.speed_picker  = Picker("Speed")
         self.offset_picker = Picker("Offset")
 
-        self.speed_picker.value_added.connect(lambda v: print("Speed added:",  v))
-        self.offset_picker.value_added.connect(lambda v: print("Offset added:", v))
+        # wire pickers to serial ------------------------------------------------
+        self.speed_picker.value_added.connect(self._send_speed)
+        self.offset_picker.value_added.connect(self._send_offset)
 
         row.addStretch(1)
         row.addWidget(self.speed_picker)
@@ -105,6 +112,7 @@ class PowerPongPageWidget(QWidget):
 
         fore_btn = QPushButton("FORE!")
         fore_btn.setObjectName("ForeBtn")
+        fore_btn.clicked.connect(self._send_fore)
         row.addWidget(fore_btn)
 
         row.addStretch(1)
@@ -119,3 +127,23 @@ class PowerPongPageWidget(QWidget):
         # ───────── QSS ─────────
         css_file = STYLES_DIR / "stylePowerPongPage.qss"
         self.setStyleSheet(css_file.read_text())
+
+    # ───────────────────────── Commander helpers ─────────────────────────────
+    def _write(self, text: str):
+        """
+        Low-level send. Falls back to a console print when no port present.
+        """
+        if self.ser is None:
+            print("→", text.strip())                 # boardless mode
+            return
+        self.ser.write(text.encode())                # includes trailing \n
+        self.ser.flush()
+
+    def _send_speed(self, value: int):
+        self._write(f"T {value}\n")
+
+    def _send_offset(self, value: int):
+        self._write(f"R {value}\n")
+
+    def _send_fore(self):
+        self._write("M\n")

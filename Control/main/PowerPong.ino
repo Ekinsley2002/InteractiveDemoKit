@@ -1,12 +1,5 @@
 # include <SimpleFOC.h>
 
-// magnetic sensor instance - SPI
-MagneticSensorSPI sensor = MagneticSensorSPI(AS5048_SPI, 10);
-
-// BLDC motor & driver instance
-BLDCMotor motor = BLDCMotor(11);
-BLDCDriver3PWM driver = BLDCDriver3PWM(6, 5, 3, 4);
-
 // velocity set point variable
 float target_velocity = 2;
 float zero_point = 0;
@@ -102,7 +95,6 @@ void doMove270(char* cmd) {
   // Stop the motor
   motor.move(0);
   delay(500000);
-  
   
   Serial.println("FORE!");
   

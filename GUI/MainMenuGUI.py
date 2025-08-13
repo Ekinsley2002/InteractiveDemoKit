@@ -27,7 +27,7 @@ class MenuPage(QWidget):
         pix = QPixmap(str(logo_path))                  # always pass str(…) to Qt
         if not pix.isNull():                          # file found – show it
             pix = pix.scaledToWidth(
-                90, Qt.TransformationMode.SmoothTransformation
+                130, Qt.TransformationMode.SmoothTransformation
             )
             logo_lbl.setPixmap(pix)
         else:                                         # fallback: text placeholder
@@ -58,6 +58,7 @@ class MenuPage(QWidget):
         self.pwrpng_btn = QPushButton("Power Pong!")
         self.pwrpng_btn.setObjectName("PwrPngBtn")
         lay.addWidget(self.pwrpng_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.pwrpng_btn.clicked.connect(self.on_pwer_png_clicked)
 
         lay.addSpacing(12) 
 
@@ -76,6 +77,13 @@ class MenuPage(QWidget):
         """
         if self.ser.is_open:
             self.ser.write(b"\x01")      # GOOD: raw byte, not an int
+            self.ser.flush()
+    def on_pwer_png_clicked(self):
+        """
+        Send a single raw byte 0x02
+        """
+        if self.ser.is_open:
+            self.ser.write(b"\x02")      # GOOD: raw byte, not an int
             self.ser.flush()
         
 

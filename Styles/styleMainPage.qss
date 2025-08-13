@@ -3,28 +3,28 @@
 QWidget#CentralArea {
     background: qlineargradient(
         x1:0, y1:0, x2:0, y2:1,
-        stop:0 #655A7C,   /* deep mauve */
-        stop:1 #AB92BF    /* light purple */
+        stop:0 #FAC01A 
+        stop:1 #002454 
     );
 }
 
 /* ∎ Headline banner */
 QLabel#IntroLabel {
-    color:#CEF9F2;
+    color:#FFFFFF;
     font:600 40px "Roboto";
     padding:8px 20px;
     background:rgba(255,255,255,0.10);
-    border:2px solid #AB92BF;
+    border:2px solid #596157;
     border-radius:12px;
 }
 
 /* ∎ Base style for EVERY button on the page */
 QWidget#CentralArea QPushButton {
-    color:#CEF9F2;
+    color:#FFFFFF;
     font:600 25px "Roboto";
     padding:8px 24px;
     background:rgba(255,255,255,0.05);
-    border:2px solid #AB92BF;
+    border:2px solid #596157;
     border-radius:12px;
 
     /* ★ guarantee plenty of room for long labels                */
@@ -35,9 +35,9 @@ QWidget#CentralArea QPushButton {
 /*   ── shared hover / pressed states ──   */
 QWidget#CentralArea QPushButton:hover  {
     background:rgba(255,255,255,0.10);
-    border-color:#BFA0D0;
+    border-color:#7F7979;
 }
 QWidget#CentralArea QPushButton:pressed{
     background:rgba(255,255,255,0.14);
-    border-color:#9D7EC0;
+    border-color:#7F7979;
 }

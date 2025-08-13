@@ -1,7 +1,7 @@
 QWidget#TopographyPage {
     background: qlineargradient(
         x1:0, y1:0, x2:0, y2:1,
-        stop:0 #655A7C,     /* deep mauve */
-        stop:1 #AB92BF      /* light purple */
+        stop:0 #002454,
+        stop:1 #FAC01A
     );
 }

@@ -2,37 +2,35 @@
 QWidget#PowerPongPage {
     background: qlineargradient(
         x1:0, y1:0, x2:0, y2:1,
-        stop:0 #655A7C,
-        stop:1 #AB92BF
+        stop:0 #002454,
+        stop:1 #FAC01A
     );
 }
 
 /* ── TITLE ───────────────────────────────────────────────────────── */
 QLabel#Title {
-    color:#CEF9F2;
+    color:#FFFFFF;
     font:600 60px "Roboto";
 }
 
 /* ── PICKER HEADINGS ─────────────────────────────────────────────── */
 QLabel#PickerTitle {
-    color:#D6CA98;
+    color:#FFFFFF;
     font:500 36px "Roboto";
-    margin-bottom:8px;
+    margin-bottom:16px;
 }
 
 /* ── UNIFIED SQUARE STYLE (arrows & display) ────────────────────── */
 QLabel#ValueDisplay,
-QPushButton#ArrowBtn {
-    /* keep sizing so column width stays consistent                   */
+QPushButton#ArrowBtn {           
     min-width:120px;  max-width:120px;
     min-height:120px;  max-height:120px; 
-    border:none;                          /* ← removes blue outline   */
+    border:none;                         
     border-radius:12px;
-    
 }
 /* Value text */
 QLabel#ValueDisplay {
-    color:#CEF9F2;
+    color:#FFFFFF;
     font:600 30px "Roboto";
 }
 
@@ -41,30 +39,29 @@ QPushButton#ArrowBtn:hover  { background:rgba(255,255,255,0.10); border-color:#C
 QPushButton#ArrowBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#AB92BF; }
 
 /* ── ADD BUTTON ─────────────────────────────────────────────────── */
-/* ⭐  NEW: hard-set width to match the 90 px squares                 */
 QPushButton#AddBtn {
-    min-width:80px;  max-width:80px;
-    min-height:22px; max-height:22px; 
-    margin-top:12px;
-    
+    /* sizing – still 200 × 44 so the column stays aligned */
+    min-width:200px;  max-width:200px;
+    min-height:44px;  max-height:44px;
 
-    color:#655A7C;
-    font:600 18px "Roboto";
-    padding:6px 0px;
-    background:#D6CA98;
-    border:2px solid #655A7C;
-    border-radius:8px;
+    /* new palette */
+    color: #FFFFFF;                                  /* same aqua text */
+    background: rgba(255,255,255,0.05);              /* transparent */
+    border: 2px solid #FFFFFF;                       /* soft blue outline */
+    border-radius: 10px;                             /* match others */
+    font: 600 22px "Roboto";
 }
-QPushButton#AddBtn:hover  { background:#D6CA98CC; }
-QPushButton#AddBtn:pressed{ background:#D6CA98E6; }
+
+QPushButton#AddBtn:hover  { background:rgba(255,255,255,0.10); border-color:#CEF9F2; }
+QPushButton#AddBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#655A7C; }
 
 /* ── FORE! BUTTON ───────────────────────────────────────────────── */
 QPushButton#ForeBtn {
-    color:#CEF9F2;
+    color:#FFFFFF;
     font:600 26px "Roboto";
     padding:10px 40px;
     background:rgba(255,255,255,0.05);
-    border:2px solid #AFC1D6;
+    border:2px solid #FFFFFF;
     border-radius:12px;
 }
 QPushButton#ForeBtn:hover  { background:rgba(255,255,255,0.10); border-color:#CEF9F2; }
@@ -72,11 +69,11 @@ QPushButton#ForeBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#AB
 
 /* ── BACK BUTTON ────────────────────────────────────────────────── */
 QPushButton#BackBtn {
-    color:#CEF9F2;
+    color:#FFFFFF;
     font:600 22px "Roboto";
     padding:8px 32px;
     background:rgba(255,255,255,0.05);
-    border:2px solid #AB92BF;
+    border:2px solid #FFFFFF;
     border-radius:12px;
 }
 QPushButton#BackBtn:hover  { background:rgba(255,255,255,0.10); border-color:#AFC1D6; }

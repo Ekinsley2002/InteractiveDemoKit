@@ -1,5 +1,6 @@
 # main.py  –  app entry point & page router
 import os, sys, pathlib, serial, time
+import Config
 
 # ── HARD-CODED DPI / SCALE SETTINGS ────────────────────────────────────
 #
@@ -26,11 +27,23 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        #self.PORT = "/dev/cu.usbmodem14101"
-        self.PORT = "/dev/ttyACM0"
-
         self.BAUD = 115_200
-        self.ser  = serial.Serial(self.PORT, self.BAUD, timeout=1)
+        
+        # Check to see which device to use
+        if Config.DEVICE == "Mac":
+            self.PORT = "/dev/cu.usbmodem14101"
+
+        elif Config.DEVICE == "Linux":
+            self.PORT = "/dev/ttyACM0"
+            self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+            self.showFullScreen()
+            self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
+
+        # Check to see if using board, if not, set up fake serial
+        if Config.BOARDLESS:
+            self.ser = serial.serial_for_url("loop://", timeout=1)
+        else:
+            self.ser  = serial.Serial(self.PORT, self.BAUD, timeout=1)
 
         self.setWindowTitle("Interactive Demo Kit")
 
@@ -38,14 +51,6 @@ class MainWindow(QMainWindow):
         self.setFixedSize(800, 480)
         self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, False)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
-
-        # If you prefer the app to occupy the full LCD without borders,
-        # uncomment the next line instead of setFixedSize:
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        self.showFullScreen()
-
-        # Hide the cursor
-        self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
 
         # ── stacked-page container ──────────────────────────────────
         self.stack = QStackedWidget(self)
@@ -79,7 +84,7 @@ class MainWindow(QMainWindow):
         )
 
         # page 3 → Power-Pong
-        self.power_pong_page = PowerPongPageWidget()
+        self.power_pong_page = PowerPongPageWidget(self.ser)
         self.stack.addWidget(self.power_pong_page)
         self.menu_page.pwrpng_btn.clicked.connect(
             lambda: self.stack.setCurrentWidget(self.power_pong_page)
@@ -89,7 +94,7 @@ class MainWindow(QMainWindow):
         )
 
         # page 4 → Fun-with-Motors (re-uses PowerPong widget for now)
-        self.motor_fun_page = PowerPongPageWidget()
+        self.motor_fun_page = MotorFunPageWidget()
         self.stack.addWidget(self.motor_fun_page)
         self.menu_page.mtrfun_btn.clicked.connect(
             lambda: self.stack.setCurrentWidget(self.motor_fun_page)

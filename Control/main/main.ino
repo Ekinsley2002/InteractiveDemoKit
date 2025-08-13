@@ -1,3 +1,21 @@
+/*FOR AFM MOVE LATER*/
+#include <SimpleFOC.h>
+
+// ──────────────────────────  Hardware objects
+MagneticSensorSPI sensor = MagneticSensorSPI(AS5048_SPI, 10);
+BLDCMotor         motor  = BLDCMotor(11);
+BLDCDriver3PWM    driver = BLDCDriver3PWM(6, 5, 3, 4);
+
+// ──────────────────────────  Angle helpers
+#define _DEG2RAD 0.01745329251994329577f
+#define _RAD2DEG 57.295779513082320876f
+
+const float ZERO_DEG = 250.0f;                  // mech. reference
+const float ZERO_RAD = ZERO_DEG * _DEG2RAD;
+
+// ──────────────────────────  Software smoother
+const float  ALPHA = 0.15f;
+static float angleFilt = ZERO_RAD;
 
 
 // Event constants
@@ -20,13 +38,27 @@ void setup() {
 }
 
 void loop() {
+  static bool afm_initialised = false;     // remembers we did it once
+
   int code = checkCode();
-  if (code < 0) return;      // nothing new
+  if (code < 0) return;
 
   switch (code) {
-    case MAIN_MENU:  return;               // or break;
-    case AFM:        runAFM(); return;     // add return/break to stop fall-through
-    case POWER_PONG: runPowerPong();
+    case MAIN_MENU:
+      afm_initialised = false;             // reset flags when you leave
+      return;
+
+    case AFM:
+      if (!afm_initialised) {              // <--------------
+        setupAFM();
+        afm_initialised = true;
+      }
+      runAFM();
+      return;
+
+    case POWER_PONG:
+      afm_initialised = false;
+      runPowerPong();
   }
 }
 
@@ -43,7 +75,36 @@ int checkCode() {
   }
 }
 
+void setupAFM() {
+  pinMode(7, OUTPUT);           digitalWrite(7, LOW);
+  pinMode(LED_BUILTIN, OUTPUT); digitalWrite(LED_BUILTIN, HIGH);
+
+  Serial.begin(115200);
+
+  sensor.init();
+
+  driver.voltage_power_supply = 12;
+  driver.init();
+
+  motor.linkSensor(&sensor);
+  motor.linkDriver(&driver);
+
+  motor.controller           = MotionControlType::angle;
+  motor.P_angle.P            = 30.0f;
+  motor.PID_velocity.P       = 0.25f;
+  motor.PID_velocity.I       = 2.0f;
+  motor.voltage_limit        = 6.0f;
+  motor.LPF_velocity.Tf      = 0.01f;
+
+  motor.voltage_sensor_align = 2;     // alignment kick
+  motor.init();
+  motor.initFOC();
+
+  motor.target = ZERO_RAD;            // park at mech zero
+}
+
 void runAFM() {
+
   while (true) {                   // stay here until we’re told to leave
     int code = checkCode();       // –1 means “nothing new”
 
@@ -57,16 +118,28 @@ void runAFM() {
           break;
       }
     }
-    // random(0, 11) gives an integer 0‒10 inclusive.
-    int raw = random(0, 11);
 
-    // Convert to float in the desired range: 0 ➜ 0.00, 10 ➜ 0.10.
-    float value = raw / 100.0;
+  motor.loopFOC();
+  motor.move(ZERO_RAD);
 
-    // Print with exactly two decimal places.
-    Serial.println(value, 2);
+  static uint32_t t0 = 0;
+  if (millis() - t0 >= 10) {
+    t0 = millis();
 
-    delay(10);   // wait 1 s before the next value
+    /* 1. filter the raw angle */
+    float rawRad = sensor.getAngle();
+    angleFilt = (1.0f - ALPHA) * angleFilt + ALPHA * rawRad;
+
+    /* 2. offset in *your* positive direction          ↓ FLIPPED SIGN */
+    float deltaRad = fmodf((ZERO_RAD - angleFilt) + _2PI, _2PI); // 0 … 2π
+
+    /* 3. squash wrap bucket and negatives to zero */
+    float deltaDeg = deltaRad * _RAD2DEG;          // 0 … 360
+    if (deltaDeg > 100.0f)   deltaDeg = 0.0f;      // noise around wrap
+    /* if you also want any “wrong-way” motion to read 0: */
+    /* if (deltaDeg < 0.05f)   deltaDeg = 0.0f; */
+    Serial.println(deltaDeg, 3);
+  }
   }
 }
 

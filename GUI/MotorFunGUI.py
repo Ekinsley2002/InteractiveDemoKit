@@ -18,8 +18,9 @@ class MotorFunPageWidget(QWidget):
             self.setStyleSheet(f.read())
 
         layout = QVBoxLayout(self)
-        title = QLabel("More Motor Fun!")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title = QLabel("More Motor Fun!", alignment=Qt.AlignmentFlag.AlignCenter)
+        title.setObjectName("Title")
         layout.addWidget(title)
 
         # Placeholder for the game content
