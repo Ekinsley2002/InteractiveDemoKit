@@ -22,6 +22,8 @@ from GUI.TopographyGUI import TopographyPageWidget
 from GUI.PowerPongGUI  import PowerPongPageWidget
 from GUI.MotorFunGUI    import MotorFunPageWidget
 from Animation.StartupAnimation import StartupAnimation
+from Animation.GraphingLineAnimation import GraphingLineAnimation
+from Animation.PowerPongTransitionAnimation import PowerPongTransitionAnimation
 
 
 class MainWindow(QMainWindow):
@@ -93,11 +95,14 @@ class MainWindow(QMainWindow):
         # Replace the startup animation with the main menu stack
         self.setCentralWidget(self.stack)
         self.stack.setCurrentWidget(self.menu_page)
+        
+        # Start the yellow circle shrinking animation (coming from startup)
+        self.menu_page.start_yellow_circle_animation()
     
     def create_main_menu_pages(self):
         """Create all main menu pages and set up navigation"""
         # page 0 → main menu
-        self.menu_page = MenuPage(self.ser)
+        self.menu_page = MenuPage(self.ser, self)  # Pass self (MainWindow) as parent
         self.stack.addWidget(self.menu_page)
 
         # page 1 → AFM live-plot
@@ -105,11 +110,10 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.afm_page)
 
         # navigation wiring
-        self.menu_page.afm_btn.clicked.connect(
-            lambda: self.stack.setCurrentWidget(self.afm_page)
-        )
+        self.menu_page.afm_btn.clicked.connect(self.show_afm_transition)
+        self.menu_page.pwrpng_btn.clicked.connect(self.show_power_pong_transition)
         self.afm_page.back_requested.connect(
-            lambda: self.stack.setCurrentWidget(self.menu_page)
+            lambda: self.complete_afm_back_transition()
         )
 
         # page 2 → Topography
@@ -126,9 +130,6 @@ class MainWindow(QMainWindow):
         # page 3 → Power-Pong
         self.power_pong_page = PowerPongPageWidget(self.ser)
         self.stack.addWidget(self.power_pong_page)
-        self.menu_page.pwrpng_btn.clicked.connect(
-            lambda: self.stack.setCurrentWidget(self.power_pong_page)
-        )
         self.power_pong_page.back_requested.connect(
             lambda: self.stack.setCurrentWidget(self.menu_page)
         )
@@ -142,6 +143,70 @@ class MainWindow(QMainWindow):
         self.motor_fun_page.back_requested.connect(
             lambda: self.stack.setCurrentWidget(self.menu_page)
         )
+        
+    def show_afm_transition(self):
+        """Show AFM transition animation before switching to AFM page"""
+        # Send AFM command to Arduino immediately (1 = AFM mode)
+        self.ser.write(b"\x01")
+        self.ser.flush()
+        
+        # Create graphing line animation
+        self.afm_transition = GraphingLineAnimation()
+        self.afm_transition.animation_complete.connect(self.complete_afm_transition)
+        
+        # Show animation as overlay
+        self.afm_transition.setParent(self)
+        self.afm_transition.raise_()
+        self.afm_transition.show()
+        
+        # Start animation
+        self.afm_transition.start_animation()
+        
+    def complete_afm_transition(self):
+        """Called when AFM transition animation completes"""
+        # Hide the transition animation
+        if hasattr(self, 'afm_transition'):
+            self.afm_transition.hide()
+            self.afm_transition.deleteLater()
+        
+        # Switch to AFM page (this will trigger the existing serial communication)
+        self.stack.setCurrentWidget(self.afm_page)
+        
+    def complete_afm_back_transition(self):
+        """Called when coming back from AFM page to main menu"""
+        # Switch to main menu page
+        self.stack.setCurrentWidget(self.menu_page)
+        
+        # Start the blue circle shrinking animation (coming back from AFM)
+        self.menu_page.start_blue_circle_animation()
+        
+    def show_power_pong_transition(self):
+        """Show Power Pong transition animation before switching to Power Pong page"""
+        # Send Power Pong command to Arduino immediately (2 = Power Pong mode)
+        self.ser.write(b"\x02")
+        self.ser.flush()
+        
+        # Create Power Pong transition animation
+        self.power_pong_transition = PowerPongTransitionAnimation()
+        self.power_pong_transition.animation_complete.connect(self.complete_power_pong_transition)
+        
+        # Show animation as overlay
+        self.power_pong_transition.setParent(self)
+        self.power_pong_transition.raise_()
+        self.power_pong_transition.show()
+        
+        # Start animation
+        self.power_pong_transition.start_animation()
+        
+    def complete_power_pong_transition(self):
+        """Called when Power Pong transition animation completes"""
+        # Hide the transition animation
+        if hasattr(self, 'power_pong_transition'):
+            self.power_pong_transition.hide()
+            self.power_pong_transition.deleteLater()
+        
+        # Switch to Power Pong page
+        self.stack.setCurrentWidget(self.power_pong_page)
 
 
 def main():

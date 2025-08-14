@@ -24,6 +24,7 @@ QPushButton#ArrowBtn {
     border:none;                         
     border-radius:12px;
 }
+
 /* Value text */
 QLabel#ValueDisplay {
     color:#FFFFFF;

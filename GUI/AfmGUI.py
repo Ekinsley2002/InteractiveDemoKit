@@ -3,11 +3,93 @@ import time, serial, os
 import numpy as np
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPointF
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QLabel
 )
+from PyQt6.QtGui import QPainter, QColor, QPen
+
+
+class CircleOverlay(QWidget):
+    """Separate overlay widget for the shrinking circle animation"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)  # Pass through mouse events
+        # Remove the transparency attributes that might be hiding the widget
+        # self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        
+        # Animation properties
+        self.circle_radius = 933  # Start with full screen coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.shrinking_circle = True
+        
+        # Set a solid background to ensure visibility
+        self.setStyleSheet("background-color: white;")  # Start with solid white background
+        
+    def update_circle(self, radius):
+        """Update the circle radius for animation"""
+        self.circle_radius = radius
+        self.update()
+        
+    def set_animation_state(self, active):
+        """Set whether the animation is active"""
+        self.shrinking_circle = active
+        self.update()
+        
+    def paintEvent(self, event):
+        """Draw the shrinking white circle overlay"""
+        if not self.shrinking_circle:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw white circle that covers the screen and shrinks
+        painter.setPen(Qt.PenStyle.NoPen)  # No outline
+        painter.setBrush(QColor(255, 255, 255))  # White fill
+        painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
+
+
+class BlueTransitionOverlay(QWidget):
+    """Overlay widget for the blue transition when going back to main menu"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        
+        # Animation properties
+        self.circle_radius = 0  # Start with no coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.expanding_circle = False
+        
+        # Set transparent background
+        self.setStyleSheet("background-color: transparent;")
+        
+    def update_circle(self, radius):
+        """Update the circle radius for animation"""
+        self.circle_radius = radius
+        self.update()
+        
+    def set_animation_state(self, active):
+        """Set whether the animation is active"""
+        self.expanding_circle = active
+        self.update()
+        
+    def paintEvent(self, event):
+        """Draw the expanding blue circle overlay"""
+        if not self.expanding_circle:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw blue circle that expands to fill the screen
+        painter.setPen(Qt.PenStyle.NoPen)  # No outline
+        painter.setBrush(QColor(0, 36, 84))  # #002454 blue fill
+        painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
 class AfmPageWidget(QWidget):
@@ -69,7 +151,7 @@ class AfmPageWidget(QWidget):
         self.plot.getAxis('left').setPen('k')  # Y-axis line in black
         self.plot.getAxis('bottom').setPen('k')  # X-axis line in black
         
-        self.curve = self.plot.plot(pen="y")
+        self.curve = self.plot.plot(pen="r")
 
         # 2) Create Back button *with graph_holder as its parent* and
         #    position it manually.
@@ -139,6 +221,94 @@ class AfmPageWidget(QWidget):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(self.TIMER_MS)
+        
+        # ── Shrinking Circle Animation ─────────────────────
+        self.shrinking_circle = True  # Start with white screen
+        self.circle_radius = 933  # Start with full screen coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.shrink_animation_timer = QTimer()
+        self.shrink_animation_timer.timeout.connect(self.update_shrink_animation)
+        self.shrink_animation_timer.setInterval(16)  # 60 FPS for smooth animation
+        self.shrink_frames = 35  # Same speed as expanding circle (0.58 seconds)
+        self.shrink_frame_count = 0
+        
+        # Don't create overlay here - wait until page is shown
+        self.circle_overlay = None
+        
+        # ── Blue Transition Animation (Going Back) ─────────────────────
+        self.blue_transition_timer = QTimer()
+        self.blue_transition_timer.timeout.connect(self.update_blue_transition)
+        self.blue_transition_timer.setInterval(16)  # 60 FPS for smooth animation
+        self.blue_transition_frames = 30  # 0.5 seconds
+        self.blue_transition_frame_count = 0
+        self.blue_transition_active = False
+        
+        # Don't create blue overlay here - wait until needed
+        self.blue_transition_overlay = None
+        
+        # Add a method to reset animation state
+        self._reset_shrink_animation()
+    
+    def _reset_shrink_animation(self):
+        """Reset the shrinking circle animation to initial state"""
+        self.shrink_frame_count = 0
+        self.shrinking_circle = True
+        self.circle_radius = 933  # Full screen coverage
+        if hasattr(self, 'shrink_animation_timer'):
+            self.shrink_animation_timer.stop()
+            
+    def _reset_blue_transition(self):
+        """Reset the blue transition animation to initial state"""
+        self.blue_transition_frame_count = 0
+        self.blue_transition_active = False
+        if hasattr(self, 'blue_transition_timer'):
+            self.blue_transition_timer.stop()
+    
+    def update_shrink_animation(self):
+        """Update the shrinking circle animation"""
+        self.shrink_frame_count += 1
+        
+        # Calculate progress (0.0 to 1.0) - reverse of expanding circle
+        progress = 1.0 - (self.shrink_frame_count / self.shrink_frames)
+        progress = max(0.0, progress)  # Don't go below 0
+        
+        # Calculate radius based on progress
+        max_radius = 933
+        self.circle_radius = progress * max_radius
+        
+        # Update the overlay widget if it exists
+        if self.circle_overlay is not None:
+            self.circle_overlay.update_circle(self.circle_radius)
+            
+            # Check if shrinking is complete
+            if self.shrink_frame_count >= self.shrink_frames:
+                self.shrink_animation_timer.stop()
+                self.shrinking_circle = False
+                self.circle_overlay.set_animation_state(False)  # Hide the overlay
+
+    def update_blue_transition(self):
+        """Update the blue transition animation when going back"""
+        self.blue_transition_frame_count += 1
+        
+        # Calculate progress (0.0 to 1.0)
+        progress = min(self.blue_transition_frame_count / self.blue_transition_frames, 1.0)
+        
+        # Calculate radius based on progress - expand from center to fill screen
+        max_radius = 933  # Full screen coverage
+        self.blue_transition_radius = progress * max_radius
+        
+        # Update the blue overlay widget if it exists
+        if self.blue_transition_overlay is not None:
+            self.blue_transition_overlay.update_circle(self.blue_transition_radius)
+            
+            # Check if expansion is complete
+            if self.blue_transition_frame_count >= self.blue_transition_frames:
+                self.blue_transition_timer.stop()
+                self.blue_transition_active = False
+                
+                # Now that the blue circle has filled the screen, emit the back signal
+                # This will trigger the page transition to main menu
+                self.back_requested.emit()
 
     def load_trials(self):
         if os.path.exists(self.TRIAL_FILE):
@@ -224,14 +394,72 @@ class AfmPageWidget(QWidget):
     def showEvent(self, event):
         self._resume_if_needed()
         super().showEvent(event)
+        
+        # Always reset and recreate the overlays when the page is shown
+        # This ensures the animations work every time
+        
+        # Clean up existing white shrinking overlay
+        if self.circle_overlay is not None:
+            self.circle_overlay.deleteLater()
+            self.circle_overlay = None
+            
+        # Clean up existing blue transition overlay (from previous visits)
+        if hasattr(self, 'blue_transition_overlay') and self.blue_transition_overlay is not None:
+            self.blue_transition_overlay.deleteLater()
+            self.blue_transition_overlay = None
+        
+        # Create fresh white shrinking overlay
+        self.circle_overlay = CircleOverlay(self)
+        self.circle_overlay.setFixedSize(800, 480)
+        self.circle_overlay.move(0, 0)  # Position at top-left corner
+        self.circle_overlay.raise_()  # Ensure it's on top of everything
+        self.circle_overlay.show()  # Explicitly show the overlay
+        
+        # Reset animation state and start the shrinking animation
+        self._reset_shrink_animation()
+        self._reset_blue_transition()  # Also reset blue transition state
+        self.shrink_animation_timer.start()
 
     def go_back(self):
-        """User hit Back -> stop stream & switch to menu."""
+        """User hit Back -> start blue transition animation, then switch to menu."""
+        # Stop the data stream and reset
         self.timer.stop()
         self.ser.write(b"\x00")          # MAIN_MENU  = 0  ➜ pause Arduino
         self.ser.flush()
         self._full_reset()
-        self.back_requested.emit()
+        
+        # Clean up shrinking animation state
+        if self.circle_overlay is not None:
+            self.shrink_animation_timer.stop()
+            self.circle_overlay.hide()
+            
+        # Clean up blue transition animation state
+        if hasattr(self, 'blue_transition_timer'):
+            self.blue_transition_timer.stop()
+        if hasattr(self, 'blue_shrinking_timer'):
+            self.blue_shrinking_timer.stop()
+        
+        # Start the blue transition animation
+        self._start_blue_transition()
+        
+    def _start_blue_transition(self):
+        """Start the blue circle expansion animation when going back"""
+        # Create the blue transition overlay
+        self.blue_transition_overlay = BlueTransitionOverlay(self)
+        self.blue_transition_overlay.setFixedSize(800, 480)
+        self.blue_transition_overlay.move(0, 0)  # Position at top-left corner
+        self.blue_transition_overlay.raise_()  # Ensure it's on top of everything
+        self.blue_transition_overlay.show()  # Show the overlay
+        
+        # Reset animation state
+        self.blue_transition_frame_count = 0
+        self.blue_transition_active = True
+        
+        # Activate the blue overlay
+        self.blue_transition_overlay.set_animation_state(True)
+        
+        # Start the animation timer
+        self.blue_transition_timer.start()
 
     def closeEvent(self, event):
         super().closeEvent(event)
