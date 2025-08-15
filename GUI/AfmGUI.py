@@ -151,7 +151,9 @@ class AfmPageWidget(QWidget):
         self.plot.getAxis('left').setPen('k')  # Y-axis line in black
         self.plot.getAxis('bottom').setPen('k')  # X-axis line in black
         
-        self.curve = self.plot.plot(pen="r")
+        # Create a thick red pen for the plotting curve (4x thicker)
+        thick_pen = pg.mkPen(color='r', width=4)  # Red color with 4px width
+        self.curve = self.plot.plot(pen=thick_pen)
 
         # 2) Create Back button *with graph_holder as its parent* and
         #    position it manually.

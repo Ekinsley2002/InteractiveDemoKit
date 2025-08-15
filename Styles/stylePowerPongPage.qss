@@ -64,6 +64,19 @@ QPushButton#ForeBtn {
 QPushButton#ForeBtn:hover  { background:rgba(255,255,255,0.10); border-color:#CEF9F2; }
 QPushButton#ForeBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#AB92BF; }
 
+/* ── ZERO POSITION BUTTON ───────────────────────────────────────── */
+QPushButton#ZeroBtn {
+    color:#FFFFFF;
+    font:600 22px "Roboto";
+    padding:8px 32px;
+    background:rgba(255,255,255,0.05);
+    border:2px solid #FFFFFF;
+    border-radius:12px;
+    margin-top: 8px;  /* Add spacing above the button */
+}
+QPushButton#ZeroBtn:hover  { background:rgba(255,255,255,0.10); border-color:#CEF9F2; }
+QPushButton#ZeroBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#AB92BF; }
+
 /* ── BACK BUTTON ────────────────────────────────────────────────── */
 QPushButton#BackBtn {
     color:#FFFFFF;

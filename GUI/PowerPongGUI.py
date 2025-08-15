@@ -110,10 +110,23 @@ class PowerPongPageWidget(QWidget):
         row.addWidget(self.offset_picker)
         row.addStretch(1)
 
+        # Create a vertical layout for the FORE and Zero Position buttons
+        button_column = QVBoxLayout()
+        button_column.setSpacing(8)  # Small spacing between buttons
+        
         fore_btn = QPushButton("FORE!")
         fore_btn.setObjectName("ForeBtn")
         fore_btn.clicked.connect(self._send_fore)
-        row.addWidget(fore_btn)
+        button_column.addWidget(fore_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        # Add Zero Position button underneath the FORE button
+        zero_btn = QPushButton("Zero Position")
+        zero_btn.setObjectName("ZeroBtn")
+        zero_btn.clicked.connect(self._send_zero_position)
+        button_column.addWidget(zero_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        
+        # Add the button column to the main row
+        row.addLayout(button_column)
 
         row.addStretch(1)
         root.addLayout(row, stretch=1)
@@ -147,3 +160,6 @@ class PowerPongPageWidget(QWidget):
 
     def _send_fore(self):
         self._write("M\n")
+
+    def _send_zero_position(self):
+        self._write("R\n")
