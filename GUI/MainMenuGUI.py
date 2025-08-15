@@ -139,7 +139,7 @@ class MenuPage(QWidget):
         
         # Position gear using easily adjustable x,y coordinates
         # Adjust these values to position the gear exactly where you want it
-        self.gear_x = 221  # X coordinate in pixels (0 = left edge, 800 = right edge)
+        self.gear_x = 222  # X coordinate in pixels (0 = left edge, 800 = right edge)
         self.gear_y = -60  # Y coordinate: negative to make gear "touch" top of screen
         
         # Position the gear at the specified coordinates
