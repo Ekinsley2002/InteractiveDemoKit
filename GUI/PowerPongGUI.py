@@ -6,7 +6,7 @@ from PyQt6.QtGui     import QIcon, QCursor
 
 # -------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-IMAGES_DIR   = PROJECT_ROOT / "images"
+IMAGES_DIR   = Path("Images")
 STYLES_DIR   = PROJECT_ROOT / "Styles"
 
 

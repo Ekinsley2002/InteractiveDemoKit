@@ -106,7 +106,7 @@ class MenuPage(QWidget):
         
         # ───────── LOGO ─────────
         base_dir = Path(__file__).resolve().parent.parent     # folder where menu_page.py lives
-        logo_path = base_dir / "images" / "logoBackground.png"   # works on Windows & Linux
+        logo_path = "Images/logoBackground.png"   # works on Windows & Linux
 
         logo_lbl = QLabel()
         pix = QPixmap(str(logo_path))                  # always pass str(…) to Qt

@@ -430,7 +430,7 @@ class GraphingLineAnimation(QWidget):
         try:
             from pathlib import Path
             base_dir = Path(__file__).resolve().parent
-            probe_path = base_dir / "Sprites" / "probe.png"
+            probe_path = Path("Animation/Sprites/probe.png")
             
             if probe_path.exists():
                 from PyQt6.QtGui import QPixmap
