@@ -4,6 +4,7 @@ from pathlib import Path                        # ← NEW
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt, QTimer, QPointF
 from PyQt6.QtGui     import QPixmap, QTransform, QPainter, QColor
+import Config  # Import config to check DEV_MODE
 
 
 class YellowCircleOverlay(QWidget):
@@ -139,7 +140,7 @@ class MenuPage(QWidget):
         
         # Position gear using easily adjustable x,y coordinates
         # Adjust these values to position the gear exactly where you want it
-        self.gear_x = 222  # X coordinate in pixels (0 = left edge, 800 = right edge)
+        self.gear_x = 221  # X coordinate in pixels (0 = left edge, 800 = right edge)
         self.gear_y = -60  # Y coordinate: negative to make gear "touch" top of screen
         
         # Position the gear at the specified coordinates
@@ -167,6 +168,41 @@ class MenuPage(QWidget):
         
         # Load and display the initial gear image
         self.update_gear_rotation()
+        
+        # ───────── ESCAPE BUTTON (DEV MODE ONLY) ─────────
+        if Config.DEV_MODE:
+            # Create escape button for development mode - completely independent styling
+            self.escape_button = QPushButton("ESC", self)
+            self.escape_button.setObjectName("EscapeBtn")
+            self.escape_button.setFixedSize(35, 30)
+            self.escape_button.move(10, 10)  # Position in top left corner
+            self.escape_button.raise_()  # Ensure it's on top
+            
+            # Apply minimal inline styling to bypass all QSS constraints
+            self.escape_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #FF0000;
+                    color: white;
+                    border: 2px solid #CC0000;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    font-size: 12px;
+                    padding: 2px;
+                    margin: 0px;
+                    min-width: 35px;
+                    max-width: 35px;
+                    min-height: 30px;
+                    max-height: 30px;
+                }
+                QPushButton:hover {
+                    background-color: #FF3333;
+                }
+                QPushButton:pressed {
+                    background-color: #CC0000;
+                }
+            """)
+            
+            self.escape_button.clicked.connect(self.quit_app)
         
         # ───────── HEADLINE ─────────
         headline = QLabel("Welcome to the Interactive Demo Kit!")
@@ -319,6 +355,15 @@ class MenuPage(QWidget):
         self.gear_y = y
         self.gear_label.move(self.gear_x, self.gear_y)
     
+    def quit_app(self):
+        """Quit the application (called by escape button in dev mode)"""
+        if self.main_window:
+            self.main_window.close()
+        else:
+            # Fallback: quit the application directly
+            from PyQt6.QtWidgets import QApplication
+            QApplication.quit()
+
 
 
 
