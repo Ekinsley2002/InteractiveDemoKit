@@ -163,5 +163,4 @@ class PowerPongPageWidget(QWidget):
 
     def _send_zero_position(self):
         # Send command in SimpleFOC Commander format: "R {offset}"
-        current_offset = 40
-        self._write(f"R {current_offset}\n")
+        self._write(f"R")

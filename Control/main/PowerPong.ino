@@ -2,7 +2,7 @@
 
 // velocity set point variable
 float target_velocity = 2;
-float zero_point = 240;
+float zero_point = 150;
 
 // instantiate the commander
 Commander command = Commander(Serial);
