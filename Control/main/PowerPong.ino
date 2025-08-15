@@ -110,8 +110,8 @@ void doMove270(char* cmd) {
 
 void doResetZero(char* cmd) {
 
-  // Directly convert the command to a float offset
-  float offset = atof(cmd);
+  // Skip the first character ('R') and parse the rest as the offset value
+  float offset = atof(cmd + 1);
 
   // Print the offset for debugging
   Serial.print("Moving to Offset: ");
