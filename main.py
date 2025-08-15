@@ -146,16 +146,18 @@ class MainWindow(QMainWindow):
         
     def show_afm_transition(self):
         """Show AFM transition animation before switching to AFM page"""
+        
         # Send AFM command to Arduino immediately (1 = AFM mode)
         self.ser.write(b"\x01")
         self.ser.flush()
         
         # Create graphing line animation
         self.afm_transition = GraphingLineAnimation()
+        
         self.afm_transition.animation_complete.connect(self.complete_afm_transition)
         
         # Show animation as overlay
-        self.afm_transition.setParent(self)
+        self.afm_transition.setParent(self.stack)
         self.afm_transition.raise_()
         self.afm_transition.show()
         
@@ -164,6 +166,7 @@ class MainWindow(QMainWindow):
         
     def complete_afm_transition(self):
         """Called when AFM transition animation completes"""
+        
         # Hide the transition animation
         if hasattr(self, 'afm_transition'):
             self.afm_transition.hide()
@@ -182,16 +185,18 @@ class MainWindow(QMainWindow):
         
     def show_power_pong_transition(self):
         """Show Power Pong transition animation before switching to Power Pong page"""
+        
         # Send Power Pong command to Arduino immediately (2 = Power Pong mode)
         self.ser.write(b"\x02")
         self.ser.flush()
         
         # Create Power Pong transition animation
         self.power_pong_transition = PowerPongTransitionAnimation()
+        
         self.power_pong_transition.animation_complete.connect(self.complete_power_pong_transition)
         
-        # Show animation as overlay
-        self.power_pong_transition.setParent(self)
+        # Show animation as overlay - set parent to stack widget for proper positioning
+        self.power_pong_transition.setParent(self.stack)
         self.power_pong_transition.raise_()
         self.power_pong_transition.show()
         
@@ -200,6 +205,7 @@ class MainWindow(QMainWindow):
         
     def complete_power_pong_transition(self):
         """Called when Power Pong transition animation completes"""
+        
         # Hide the transition animation
         if hasattr(self, 'power_pong_transition'):
             self.power_pong_transition.hide()

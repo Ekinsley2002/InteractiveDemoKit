@@ -127,9 +127,7 @@ class MenuPage(QWidget):
         gear_path = base_dir / "Animation" / "Sprites" / "gearMainMenu.png"
         if gear_path.exists():
             self.original_gear_pixmap = QPixmap(str(gear_path))
-            print(f"Main menu: Loaded gear image: {gear_path}")
         else:
-            print(f"Main menu: Gear image not found: {gear_path}")
             self.original_gear_pixmap = QPixmap()
         
         # Create gear label that will rotate around the logo
@@ -183,16 +181,16 @@ class MenuPage(QWidget):
         self.afm_btn = QPushButton("Atomic Force Microscope")
         self.afm_btn.setObjectName("AfmBtn")
         lay.addWidget(self.afm_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.afm_btn.clicked.connect(self.on_afm_btn_clicked)
+        # Connection handled in main.py for transition animation
 
         lay.addSpacing(10)  # Reduced from 12 to save space
 
-        # secondary → AFM page
+        # secondary → Power Pong page
         self.pwrpng_btn = QPushButton("Power Pong!")
         self.pwrpng_btn.setObjectName("PwrPngBtn")
         lay.addWidget(self.pwrpng_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.pwrpng_btn.clicked.connect(self.on_pwer_png_clicked)
-
+        # Connection handled in main.py for transition animation
+        
         lay.addSpacing(10)  # Reduced from 12 to save space
 
         # tertiary -> Motor Fun page
@@ -261,14 +259,11 @@ class MenuPage(QWidget):
         # Update the appropriate overlay widget
         if self.yellow_circle_overlay is not None:
             self.yellow_circle_overlay.update_circle(new_radius)
-            print(f"Main menu: Yellow circle shrinking - radius: {new_radius}")
         elif self.blue_circle_overlay is not None:
             self.blue_circle_overlay.update_circle(new_radius)
-            print(f"Main menu: Blue circle shrinking - radius: {new_radius}")
         
         # Check if shrinking is complete
         if self.shrink_frame_count >= self.shrink_frames:
-            print("Main menu circle shrinking complete!")
             self.shrink_animation_timer.stop()
             
             # Hide the appropriate overlay completely
@@ -294,9 +289,6 @@ class MenuPage(QWidget):
         self.yellow_circle_overlay.raise_()  # Raise to top
         self.yellow_circle_overlay.show()    # Show the overlay
         
-        print(f"Main menu: Starting with yellow circle overlay, radius: {self.yellow_circle_overlay.circle_radius}")
-        print(f"Main menu: Overlay parent: {self.yellow_circle_overlay.parent()}")
-        
         # Reset animation state and start the shrinking animation
         self.shrink_frame_count = 0
         QTimer.singleShot(100, self.shrink_animation_timer.start)  # 0.1 second delay
@@ -316,9 +308,6 @@ class MenuPage(QWidget):
         self.blue_circle_overlay.raise_()  # Raise to top
         self.blue_circle_overlay.show()    # Show the overlay
         
-        print(f"Main menu: Starting with blue circle overlay, radius: {self.blue_circle_overlay.circle_radius}")
-        print(f"Main menu: Overlay parent: {self.blue_circle_overlay.parent()}")
-        
         # Reset animation state and start the shrinking animation
         self.shrink_frame_count = 0
         QTimer.singleShot(100, self.shrink_animation_timer.start)  # 0.1 second delay
@@ -330,19 +319,9 @@ class MenuPage(QWidget):
         self.gear_y = y
         self.gear_label.move(self.gear_x, self.gear_y)
     
-    def on_afm_btn_clicked(self):
-        """
-        Send a single raw byte 0x01 (decimal 1 = AFM).
-        """
-        if self.ser.is_open:
-            self.ser.write(b"\x01")      # GOOD: raw byte, not an int
-            self.ser.flush()
-    def on_pwer_png_clicked(self):
-        """
-        Send a single raw byte 0x02
-        """
-        if self.ser.is_open:
-            self.ser.write(b"\x02")      # GOOD: raw byte, not an int
-            self.ser.flush()
+
+
+
+
         
 
