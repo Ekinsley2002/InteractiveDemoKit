@@ -162,4 +162,6 @@ class PowerPongPageWidget(QWidget):
         self._write("M\n")
 
     def _send_zero_position(self):
-        self._write("R\n")
+        # Send both the zero position command and the current offset value
+        current_offset = 0
+        self._write(f"R {current_offset}\n")
