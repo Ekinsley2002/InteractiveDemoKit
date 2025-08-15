@@ -162,6 +162,6 @@ class PowerPongPageWidget(QWidget):
         self._write("M\n")
 
     def _send_zero_position(self):
-        # Send both the zero position command and the current offset value
+        # Send just the offset value - Arduino expects only the number
         current_offset = 100
-        self._write(f"R {current_offset}\n")
+        self._write(f"{current_offset}\n")
