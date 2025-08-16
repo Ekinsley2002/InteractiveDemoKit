@@ -1,23 +1,8 @@
 # include <SimpleFOC.h>
 
-// ============================================================================
-// CALIBRATION INSTRUCTIONS:
-// ============================================================================
-// To calibrate the zero position:
-// 1. Change the CALIBRATED_ZERO_POSITION value below
-// 2. Upload the code to the Arduino
-// 3. Click "Zero Position" in the GUI - motor will go to this position
-// 4. If not correct, adjust CALIBRATED_ZERO_POSITION and repeat
-// 
-// The offset picker works RELATIVE to this calibrated zero position
-// ============================================================================
-
 // velocity set point variable
 float target_velocity = 2;
 float zero_point = 0;
-
-// CALIBRATED ZERO POSITION - Change this value to set where "zero" should be
-const float CALIBRATED_ZERO_POSITION = 0.0f; // Adjust this value in radians to calibrate zero position
 
 // instantiate the commander
 Commander command = Commander(Serial);
@@ -96,10 +81,13 @@ void powerPongLoop() {
 }
 
 void doMove270(char* cmd) {
-  // Use the calibrated zero position as the reference point
-  zero_point = CALIBRATED_ZERO_POSITION;
+  // Save the current position as the initial zero point
+  float zero_point = sensor.getAngle();
+
+  float swing_finish = zero_point + 1;
+
   
-  // Calculate the target angle for 270 degrees from the calibrated zero
+  // Calculate the target angle for 270 degrees
   float target_angle = zero_point - (300.0 * (PI / 180.0)); // Convert degrees to radians
   
   // Rotate to 270 degrees
@@ -114,8 +102,8 @@ void doMove270(char* cmd) {
   
   Serial.println("FORE!");
   
-  // Swing back to zero point
-  while (sensor.getAngle() < zero_point) {
+  // Swing back to swing finish
+  while (sensor.getAngle() < swing_finish) {
     motor.move(target_velocity);
     motor.loopFOC();
   }
@@ -125,24 +113,17 @@ void doMove270(char* cmd) {
 }
 
 void doResetZero(char* cmd) {
-  // This function moves the motor to the CALIBRATED_ZERO_POSITION
-  // The offset value is ignored - the motor always goes to the same calibrated position
-  // To change the zero position, modify CALIBRATED_ZERO_POSITION constant above
 
   // Skip the first character ('R') and parse the rest as the offset value
-  float offset_degrees = atof(cmd + 1);
-  
-  // Convert degrees to radians
-  float offset_radians = offset_degrees * (PI / 180.0);
+  //float offset = atof(cmd + 1);
+  float offset = 0;
 
   // Print the offset for debugging
-  Serial.print("Moving to CALIBRATED ZERO POSITION (radians): ");
-  Serial.println(CALIBRATED_ZERO_POSITION, 4);
-  Serial.print("Current position (radians): ");
-  Serial.println(sensor.getAngle(), 4);
+  Serial.print("Moving to Offset: ");
+  Serial.println(offset, 4);
 
   // Calculate the new zero point by adding the offset to the current zero point
-  float new_zero = CALIBRATED_ZERO_POSITION; // Always go to the calibrated zero position
+  float new_zero = 4.38;
 
   // Move to the new zero point
   float current_angle = sensor.getAngle();

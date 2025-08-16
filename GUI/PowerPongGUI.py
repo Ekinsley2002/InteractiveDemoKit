@@ -99,7 +99,7 @@ class PowerPongPageWidget(QWidget):
         row = QHBoxLayout(); row.setSpacing(40)
 
         self.speed_picker  = Picker("Speed")
-        self.offset_picker = Picker("Offset from Zero")
+        self.offset_picker = Picker("Offset")
 
         # wire pickers to serial ------------------------------------------------
         self.speed_picker.value_added.connect(self._send_speed)
@@ -162,7 +162,6 @@ class PowerPongPageWidget(QWidget):
         self._write("M\n")
 
     def _send_zero_position(self):
-        # Send command to move to calibrated zero position
-        # Note: The offset value sent here is ignored by the Arduino
-        # The motor will always go to the same calibrated position
-        self._write("R 0\n")
+        # Send command in SimpleFOC Commander format: "R {offset}"
+        current_offset = 90
+        self._write(f"R{current_offset}\n")
