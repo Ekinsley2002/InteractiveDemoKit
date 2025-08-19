@@ -397,5 +397,5 @@ pip install PyQt6 pyserial matplotlib numpy
 ---
 
 **Version**: 4.0  
-**Last Updated**: 2024  
-**Maintainer**: Interactive Demo Kit Development Team
+**Last Updated**: Aug 2025  
+**Maintainer**: Elliott Kinsley
