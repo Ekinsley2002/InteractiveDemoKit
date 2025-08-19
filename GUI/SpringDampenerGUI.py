@@ -109,8 +109,8 @@ class SpringDampenerPageWidget(QWidget):
         self.damping_picker = Picker("Damping Gain", 0, 50, is_float=False)
 
         # Wire pickers to handle value changes
-        self.spring_picker.value_added.connect(self._handle_spring_constant)
-        self.damping_picker.value_added.connect(self._handle_damping_gain)
+        self.spring_picker.value_added.connect(self._send_spring_constant)
+        self.damping_picker.value_added.connect(self._send_damping_gain)
 
         row.addStretch(1)
         row.addWidget(self.spring_picker)
@@ -123,7 +123,7 @@ class SpringDampenerPageWidget(QWidget):
         
         test_btn = QPushButton("Test Parameters")
         test_btn.setObjectName("TestBtn")
-        test_btn.clicked.connect(self._test_parameters)
+        test_btn.clicked.connect(self._send_test_parameters)
         button_column.addWidget(test_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
         
         # Add the button column to the main row
@@ -210,32 +210,25 @@ class SpringDampenerPageWidget(QWidget):
                 }
             """)
 
-    # ───────────────────────── Parameter handlers ─────────────────────────────
-    def _handle_spring_constant(self, value: str):
-        if self.serial_connection:
-            command = f"K{value}"
-            self.serial_connection.write(command.encode())
-            self.serial_connection.flush()
-            print(f"Sent Spring Constant: {command}")
-        else:
-            print(f"Spring Constant set to: {value} (no serial connection)")
+    # ───────────────────────── Commander helpers ─────────────────────────────
+    def _write(self, text: str):
+        """
+        Low-level send. Falls back to a console print when no port present.
+        """
+        if self.serial_connection is None:
+            print("→", text.strip())                 # boardless mode
+            return
+        self.serial_connection.write(text.encode())   # includes trailing \n
+        self.serial_connection.flush()
 
-    def _handle_damping_gain(self, value: str):
-        if self.serial_connection:
-            command = f"D{value}"
-            self.serial_connection.write(command.encode())
-            self.serial_connection.flush()
-            print(f"Sent Damping Gain: {command}")
-        else:
-            print(f"Damping Gain set to: {value} (no serial connection)")
+    def _send_spring_constant(self, value: str):
+        self._write(f"K{value}\n")
 
-    def _test_parameters(self):
-        if self.serial_connection:
-            self.serial_connection.write(b"T")
-            self.serial_connection.flush()
-            print("Sent Test Parameters command: T")
-        else:
-            print("Test Parameters button clicked (no serial connection)")
+    def _send_damping_gain(self, value: str):
+        self._write(f"D{value}\n")
+
+    def _send_test_parameters(self):
+        self._write("T\n")
 
     def go_back(self):
         self.back_requested.emit()

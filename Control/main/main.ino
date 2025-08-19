@@ -81,6 +81,7 @@ int checkCode() {
     case MAIN_MENU:  return MAIN_MENU;
     case AFM:        return AFM;
     case POWER_PONG: return POWER_PONG;
+    case SPRING_DAMPENER: return SPRING_DAMPENER;
     default:         return -1;             // unknown code
   }
 }
@@ -122,10 +123,12 @@ void runAFM() {
       switch (code) {
         case MAIN_MENU:
         case POWER_PONG:
+        case SPRING_DAMPENER:
           return;                 // leave AFM mode
         case AFM:
           /* stay here */         // do nothing special
           break;
+        
       }
     }
 
@@ -167,6 +170,7 @@ void runPowerPong() {
       switch (code) {
         case MAIN_MENU:
         case AFM:
+        case SPRING_DAMPENER:
           return;                 // leave Golf mode
         case POWER_PONG:
           /* stay here */         // do nothing special

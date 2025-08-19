@@ -5,13 +5,6 @@ float spring_constant = 13; // Proportional gain
 float damping_constant = 3; // Derivative gain
 
 
-// Magnetic sensor instance - SPI
-MagneticSensorSPI sensor = MagneticSensorSPI(AS5048_SPI, 10); // Hardware/wiring specific
-
-// BLDC motor & driver instance
-BLDCMotor motor = BLDCMotor(11); // Hardware - 11 pole motor
-BLDCDriver3PWM driver = BLDCDriver3PWM(6, 5, 3, 4); // Hardware/wiring specific
-
 // Damping derivative calculation variables
 float previous_position = 0;
 unsigned long previous_time = 0;
@@ -31,9 +24,6 @@ bool rise_time_recorded = false;
 unsigned long rise_time = 0;
 const float fixed_settle_threshold = 0.02 * 2.094; // 5% of the total step change range
 unsigned long last_log_time = 0; // Logging time tracker
-
-// Instantiate the commander
-Commander command = Commander(Serial);
 
 // Command to change spring constant
 void doSpringConstant(char* cmd) { command.scalar(&spring_constant, cmd); }

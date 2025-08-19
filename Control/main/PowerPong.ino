@@ -157,5 +157,4 @@ void doResetZero(char* cmd) {
 
   // Stop the motor
   motor.move(0);
-  
 }
