@@ -1,4 +1,3 @@
-# Imports
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt, QSize, pyqtSignal, QTimer
@@ -6,16 +5,14 @@ from PyQt6.QtGui     import QIcon, QCursor
 import serial
 import time
 
-# -------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMAGES_DIR   = Path("Images")
 STYLES_DIR   = PROJECT_ROOT / "Styles"
 
 
-# ────────────────────────────────────────────────────────────────
 class Picker(QWidget):
     """One vertical picker column with ▲ / ▼ / Add."""
-    value_added = pyqtSignal(str)          # emits the formatted string value
+    value_added = pyqtSignal(str)
 
     COL_W = 200
 
@@ -54,7 +51,6 @@ class Picker(QWidget):
         v.addStretch(1)
         v.addWidget(add_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-    # helpers ------------------------------------------------------
     def _make_arrow(self, filename: str, delta: int) -> QPushButton:
         path = IMAGES_DIR / filename
         btn  = QPushButton()
@@ -70,21 +66,16 @@ class Picker(QWidget):
         new_value = self._value + (delta * self._increment)
         if self._min_val <= new_value <= self._max_val:
             self._value = new_value
-            # Format display: show 1 decimal place for floats, no decimals for integers
             display_text = f"{self._value:.1f}" if self._is_float else str(int(self._value))
             self.value_lbl.setText(display_text)
 
     def _emit_add(self):
-        # Format output: show 1 decimal place for floats, no decimals for integers
         formatted_value = f"{self._value:.1f}" if self._is_float else str(int(self._value))
         self.value_added.emit(formatted_value)
 
 
-# ────────────────────────────────────────────────────────────────
 class SpringDampenerPageWidget(QWidget):
-    """
-    Spring Dampener Tuning page with adjustable parameters.
-    """
+    """Spring Dampener Tuning page with adjustable parameters."""
     back_requested = pyqtSignal()
 
     def __init__(self, serial_connection=None, parent=None):
@@ -105,7 +96,7 @@ class SpringDampenerPageWidget(QWidget):
         title.setObjectName("Title")
         root.addWidget(title)
 
-        # ───────── PICKERS + TEST PARAMETERS ROW ─────────
+        # Picker controls
         row = QHBoxLayout(); row.setSpacing(40)
 
         self.spring_picker = Picker("Spring Constant", 0.0, 50.0, is_float=True)
@@ -141,13 +132,13 @@ class SpringDampenerPageWidget(QWidget):
         row.addStretch(1)
         root.addLayout(row, stretch=1)
 
-        # ───────── BACK ─────────
+        # Back button
         back_btn = QPushButton("Back")
         back_btn.setObjectName("BackBtn")
         back_btn.clicked.connect(self.go_back)
         root.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # ───────── QSS ─────────
+        # Load stylesheet
         css_file = STYLES_DIR / "styleSpringDampenerPage.qss"
         if css_file.exists():
             self.setStyleSheet(css_file.read_text())
@@ -231,15 +222,13 @@ class SpringDampenerPageWidget(QWidget):
                 }
             """)
 
-    # ───────────────────────── Commander helpers ─────────────────────────────
+    # Serial communication helpers
     def _write(self, text: str):
-        """
-        Low-level send. Falls back to a console print when no port present.
-        """
+        """Low-level send. Falls back to console print when no port present."""
         if self.serial_connection is None:
-            print("→", text.strip())                 # boardless mode
+            print("→", text.strip())
             return
-        self.serial_connection.write(text.encode())   # includes trailing \n
+        self.serial_connection.write(text.encode())
         self.serial_connection.flush()
 
     def _send_spring_constant(self, value: str):
@@ -258,7 +247,6 @@ class SpringDampenerPageWidget(QWidget):
         try:
             # Check if swingData.txt exists
             if not Path("swingData.txt").exists():
-                print("No swing data file found. Run a test first to collect data.")
                 return
                 
             # Read the data
@@ -273,14 +261,13 @@ class SpringDampenerPageWidget(QWidget):
                             continue
             
             if not data:
-                print("No valid data found in swingData.txt")
                 return
                 
             # Create the graph
             self._create_swing_graph(data)
             
-        except Exception as e:
-            print(f"Error reading swing data: {e}")
+        except Exception:
+            pass
     
     def _create_swing_graph(self, data):
         """Create and display a graph overlay on the screen"""
@@ -369,14 +356,10 @@ class SpringDampenerPageWidget(QWidget):
             self.graph_overlay.show()
             self.graph_overlay.raise_()
             
-            print(f"📈 Graph overlay displayed with {len(data)} data points")
-            
         except ImportError:
-            print("❌ matplotlib not available. Install with: pip install matplotlib")
-        except Exception as e:
-            print(f"❌ Error creating graph overlay: {e}")
-            import traceback
-            traceback.print_exc()
+            pass
+        except Exception:
+            pass
     
     def _close_graph_overlay(self):
         """Close the graph overlay"""
@@ -384,23 +367,16 @@ class SpringDampenerPageWidget(QWidget):
             self.graph_overlay.hide()
             self.graph_overlay.deleteLater()
             self.graph_overlay = None
-            print("Graph overlay closed")
     
     def _start_data_collection(self):
         """Start collecting swing data from serial"""
-        print(f"=== DATA COLLECTION STARTING ===")
-        print(f"Current data collection state: {self.data_collection_active}")
-        print(f"Current swing data count: {len(self.swing_data)}")
-        
         self.data_collection_active = True
         self.swing_data = []
         self.last_data_time = time.time()
-        print("Started collecting swing data...")
         
         # Set up a timer to check for incoming data
         if hasattr(self, 'data_timer'):
             self.data_timer.stop()
-            print("Stopped previous data timer")
         
         self.data_timer = QTimer()
         self.data_timer.timeout.connect(self._check_serial_data)
@@ -413,38 +389,27 @@ class SpringDampenerPageWidget(QWidget):
         self.auto_save_timer = QTimer()
         self.auto_save_timer.timeout.connect(self._check_auto_save)
         self.auto_save_timer.start(1000)  # Check every 1 second
-        
-        print(f"Data timer started, checking every 100ms")
-        print(f"Auto-save timer started, will save if no data for 5 seconds")
-        print(f"Serial connection available: {self.serial_connection is not None}")
     
     def _check_serial_data(self):
         """Check for incoming serial data and collect swing position data"""
         if not self.data_collection_active:
-            print(f"Data collection not active, skipping check")
             return
             
         if not self.serial_connection:
-            print(f"No serial connection available, skipping check")
             return
             
         try:
             # Check if data is available
-            bytes_available = self.serial_connection.in_waiting
-            if bytes_available > 0:
-                print(f"Bytes available: {bytes_available}")
+            if self.serial_connection.in_waiting > 0:
                 line = self.serial_connection.readline().decode('utf-8').strip()
-                print(f"Serial received: '{line}' (length: {len(line)})")  # Debug print
                 
                 # Check for start signal
                 if line == "DATA_START":
                     self.swing_data = []  # Clear any previous data
-                    print("=== DATA_START signal received from Arduino ===")
                     return
                 
                 # Check for end signal
                 if line == "DATA_END":
-                    print("=== DATA_END signal received from Arduino ===")
                     self._stop_data_collection()
                     return
                 
@@ -460,26 +425,13 @@ class SpringDampenerPageWidget(QWidget):
                             
                             # Store the data point
                             self.swing_data.append((time_float, position_float))
-                            self.last_data_time = time.time()  # Update last data received time
-                            print(f"✓ Collected data point: {time_float:.3f}s, {position_float:.3f}° (Total: {len(self.swing_data)})")
+                            self.last_data_time = time.time()
                             
-                    except ValueError as e:
-                        print(f"❌ Error parsing data line '{line}': {e}")
-                else:
-                    print(f"⏭️  Skipping line: '{line}' (not CSV data)")
-            else:
-                # Only print this occasionally to avoid spam
-                if hasattr(self, '_last_debug_time'):
-                    if time.time() - self._last_debug_time > 5:  # Every 5 seconds
-                        print(f"Waiting for serial data... (active: {self.data_collection_active}, data count: {len(self.swing_data)})")
-                        self._last_debug_time = time.time()
-                else:
-                    self._last_debug_time = time.time()
+                    except ValueError:
+                        pass
                         
-        except Exception as e:
-            print(f"❌ Error reading serial data: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            pass
     
     def _check_auto_save(self):
         """Check if we should auto-save data after no new data for 5 seconds"""
@@ -490,45 +442,27 @@ class SpringDampenerPageWidget(QWidget):
         
         # If we have data and no new data for 5 seconds, auto-save
         if self.swing_data and time_since_last_data > 5.0:
-            print(f"🕒 No new data for {time_since_last_data:.1f}s - auto-saving swing data")
             self._stop_data_collection()
     
     def _stop_data_collection(self):
         """Stop collecting data and save to file"""
-        print(f"=== STOPPING DATA COLLECTION ===")
-        print(f"Data collection active: {self.data_collection_active}")
-        print(f"Total data points collected: {len(self.swing_data)}")
-        
         self.data_collection_active = False
+        
         if hasattr(self, 'data_timer'):
             self.data_timer.stop()
-            print("Data timer stopped")
         if hasattr(self, 'auto_save_timer'):
             self.auto_save_timer.stop()
-            print("Auto-save timer stopped")
         
         # Save collected data to swingData.txt
         if self.swing_data:
             try:
                 with open("swingData.txt", "w") as f:
-                    f.write("time,position\n")  # Header
+                    f.write("time,position\n")
                     for time_val, position_val in self.swing_data:
                         f.write(f"{time_val:.3f},{position_val:.3f}\n")
                 
-                print(f"✅ Successfully saved {len(self.swing_data)} data points to swingData.txt")
-                print(f"📁 File location: {Path('swingData.txt').absolute()}")
-                
-                # Show first few data points for verification
-                print("📊 First 5 data points:")
-                for i, (t, p) in enumerate(self.swing_data[:5]):
-                    print(f"   {i+1}: {t:.3f}s, {p:.3f}°")
-                
-            except Exception as e:
-                print(f"❌ Error saving swing data: {e}")
-                import traceback
-                traceback.print_exc()
-        else:
-            print("⚠️  No swing data collected - file not created")
+            except Exception:
+                pass
 
     def go_back(self):
         self.back_requested.emit()

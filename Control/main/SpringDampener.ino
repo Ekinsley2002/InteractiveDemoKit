@@ -1,6 +1,6 @@
 #include <SimpleFOC.h>
 
-// Spring-dampener tuning parameters - ONLY Variables you will change for this lab
+// Spring-dampener tuning parameters
 float spring_constant = 13; // Proportional gain
 float damping_constant = 3; // Derivative gain
 
@@ -31,16 +31,16 @@ void doSpringConstant(char* cmd) { command.scalar(&spring_constant, cmd); }
 // Command to change damping constant constant
 void doDampingConstant(char* cmd) { command.scalar(&damping_constant, cmd); }
 
-// Command to both produce a step change and record the response, including rise time, overshoot, and settle time
+// Command to toggle setpoint and record response
 void doToggleSetpoint(char* cmd) {
   toggle_state = !toggle_state;
-  start_time = millis(); // Log the start time in milliseconds
+  start_time = millis();
   logging = true;
   max_position = 0;
   settled = false;
   rise_time_recorded = false;
-  Serial.println("DATA_START"); // Signal to Python that data collection is starting
-  Serial.println("time,position"); // CSV header for logging
+  Serial.println("DATA_START");
+  Serial.println("time,position");
 }
 
 
@@ -82,11 +82,11 @@ void setupSpringDampener() {
   motor.initFOC();
 
   // Add commands to adjust parameters
-  command.add('K', doSpringConstant, "spring constant"); // Sending command "K13" changes the spring constant to 13
-  command.add('D', doDampingConstant, "damping constant"); // Sending command "D0.001" changes the damping constant to 0.001
-  command.add('T', doToggleSetpoint, "toggle setpoint"); // Sending command "T" toggles between two angle setpoints
+  command.add('K', doSpringConstant, "spring constant");
+  command.add('D', doDampingConstant, "damping constant");
+  command.add('T', doToggleSetpoint, "toggle setpoint");
 
-  // Print statements on start-up for interface instructions
+  // Print startup instructions
   Serial.println(F("Motor ready."));
   Serial.println(F("Set the tuning parameters using serial terminal, Prompt with 'K' and 'D'."));
   Serial.println(F("Toggle setpoint using 'T' command."));
@@ -96,8 +96,8 @@ void setupSpringDampener() {
 
 void springDampenerLoop() {
 
-  // Main FOC algorithm function that updates motor and sensor variables
-      motor.loopFOC();
+  // Main FOC algorithm function
+  motor.loopFOC();
 
   // Get the current position and velocity and time measurements
       float current_position = motor.shaftAngle(); // returns position in radians

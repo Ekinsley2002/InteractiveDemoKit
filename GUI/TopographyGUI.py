@@ -1,4 +1,3 @@
-# TopographyGUI.py  – only the parts that changed
 import os
 import numpy as np
 import pyqtgraph as pg
@@ -35,30 +34,23 @@ class TopographyPageWidget(QWidget):
         self.img_item = pg.ImageItem()
         self.plot.addItem(self.img_item)
 
-        # ── axis labels for new orientation ─────────
+        # Axis labels
         self.plot.setLabel("bottom", "Trial Data Over 10 Seconds")
         self.plot.setLabel("left",   "Index Layer")
 
-        self.plot.invertY(True)      # keep row-0 at the top
-        # we do NOT invert X, because trial-0 should stay at the left
+        self.plot.invertY(True)      # Keep row-0 at the top
 
         back_btn = QPushButton("Back")
         back_btn.clicked.connect(self.back_requested.emit)
         layout.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # ── Colour-map (visible zero) ──────────────
-        cmap = cm.get_cmap("Greens")
-        lut  = (cmap(np.linspace(0, 1, 256)) * 255).astype(np.ubyte)
-        lut[0, :3] = 200            # lift pure-zero from white → light grey-green
-        self.green_lut = lut
+        # Color map setup
         cmap = cm.get_cmap("Greens")
         self.green_lut = (cmap(np.linspace(0, 1, 256)) * 255).astype(np.ubyte)
-        # (No lut[0, :3] override!)
 
         self._set_trial_ticks()
         self.load_data()
 
-    # ------------------------------------------------------------
     def load_data(self):
         try:
             if not os.path.exists(TRIAL_FILE):
@@ -73,32 +65,31 @@ class TopographyPageWidget(QWidget):
             if arr.ndim == 1:
                 arr = arr.reshape(1, -1)
 
-            # ── crop / pad to fixed frame ──────────────────────────
+            # Crop/pad to fixed frame
             arr = arr[:MAX_TRIALS, :MAX_VALUES_PER_TRIAL]
-            if arr.shape[1] < MAX_VALUES_PER_TRIAL:      # pad cols
+            if arr.shape[1] < MAX_VALUES_PER_TRIAL:
                 pad = MAX_VALUES_PER_TRIAL - arr.shape[1]
                 arr = np.hstack([arr, np.full((arr.shape[0], pad), np.nan)])
-            if arr.shape[0] < MAX_TRIALS:                # pad rows
+            if arr.shape[0] < MAX_TRIALS:
                 pad = MAX_TRIALS - arr.shape[0]
                 arr = np.vstack([arr, np.full((pad, arr.shape[1]), np.nan)])
 
-            # ── NOW replace NaNs and scale -------------------------
+            # Normalize data
             row_max = arr.max(axis=1, keepdims=True)
-            row_max[row_max == 0] = 1.0          # avoid divide-by-zero
-            norm = arr / row_max                 # every row now spans 0-1
-            # --------------------------------------------------------------
+            row_max[row_max == 0] = 1.0
+            norm = arr / row_max
 
             # rotate so trials run along X
             img = norm.T                         # shape (100, 4)
             self.img_item.setLookupTable(self.green_lut)
             self.img_item.setImage(img, autoLevels=False, levels=(0, 1))
 
-            # ── draw ─────────────────────────────────────────────
+            # Display image
             self.img_item.setLookupTable(self.green_lut)
             self.img_item.setImage(img, autoLevels=True)
 
-        except Exception as e:
-            print(f"Error loading data: {e}")
+        except Exception:
+            pass
 
     def _set_trial_ticks(self):
         """

@@ -74,9 +74,7 @@ class StartupAnimation(QWidget):
         gear_path = base_dir / "Animation" / "Sprites" / "gear1.png"
         if gear_path.exists():
             self.original_gear_pixmap = QPixmap(str(gear_path))
-            print(f"Loaded gear image: {gear_path}")
         else:
-            print(f"Gear image not found: {gear_path}")
             self.original_gear_pixmap = QPixmap()
         
         # Animation variables
@@ -228,15 +226,12 @@ class StartupAnimation(QWidget):
         self.resize(800, 480)
         self.show()
         
-        # Debug: print window dimensions
-        print(f"Startup window size: {self.width()}x{self.height()}")
-        print(f"Startup window geometry: {self.geometry()}")
+
         
         self.fade_in.start()
     
     def start_logo_animation(self):
         """Start the gear rotation animation"""
-        print("Starting dynamic gear rotation animation...")
         # Reset rotation angle and timing
         self.rotation_angle = 0
         self.animation_start_time = 0
@@ -289,13 +284,10 @@ class StartupAnimation(QWidget):
         # Update the gear display with new rotation
         self.update_gear_rotation()
         
-        # Debug output (only print every 60 frames to avoid spam)
-        if int(self.rotation_angle) % 90 == 0:
-            print(f"Gear rotation: {self.rotation_angle:.1f}° | Phase: {self.animation_phase} | Speed: {self.current_rotation_speed:.1f}°/frame")
+
     
     def start_gear_shrinking(self):
         """Start the gear shrinking animation to center"""
-        print("Starting gear shrinking animation...")
         
         # Store original gear properties for animation
         self.original_gear_position = (self.gear_label.x(), self.gear_label.y())
@@ -364,7 +356,6 @@ class StartupAnimation(QWidget):
         
         # Check if shrinking is complete
         if self.shrink_frame_count >= self.shrink_frames:
-            print("Shrinking complete, starting expansion...")
             self.shrinking_gear = False
             self.expanding_gear = True
             self.expand_frame_count = 0
@@ -379,7 +370,6 @@ class StartupAnimation(QWidget):
             # Show yellow circle at smallest point
             self.yellow_circle_visible = True
             self.yellow_circle_radius = 25  # Half of the shrunk gear size
-            print(f"Yellow circle visible: {self.yellow_circle_visible}, radius: {self.yellow_circle_radius}")
             
             # Force a redraw to show the yellow circle
             self.update()
@@ -396,14 +386,11 @@ class StartupAnimation(QWidget):
         max_radius = 600  # Large enough to cover 800x480 screen
         self.yellow_circle_radius = int(25 + (max_radius - 25) * progress)
         
-        print(f"Expanding yellow circle: radius = {self.yellow_circle_radius}")
-        
         # Force redraw to show the expanding yellow circle
         self.update()
         
         # Check if expansion is complete
         if self.expand_frame_count >= self.expand_frames:
-            print("Expansion complete, starting fade out...")
             self.animation_timer.stop()
             self.expanding_gear = False
             # Start fade out after expansion completes

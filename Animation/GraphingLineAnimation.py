@@ -1,4 +1,3 @@
-# GraphingLineAnimation.py
 import random
 import math
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, QPointF
@@ -57,19 +56,19 @@ class GraphingLineAnimation(QWidget):
         self.max_points = 800 // self.line_speed  # How many points to store
         
         # Line style
-        self.line_pen = QPen(QColor(255, 255, 255), 6, Qt.PenStyle.SolidLine)  # White, 6px thick
+        self.line_pen = QPen(QColor(255, 255, 255), 6, Qt.PenStyle.SolidLine)
         
-        # Animation state - no fixed duration, ends when line reaches right edge
+        # Animation state
         self.elapsed_time = 0
         
         # Trend control for smoother movement
-        self.trend_direction = 1  # 1 for up, -1 for down
-        self.trend_counter = 0  # How long to maintain current trend
-        self.trend_duration = random.randint(30, 80)  # Frames to maintain trend
+        self.trend_direction = 1
+        self.trend_counter = 0
+        self.trend_duration = random.randint(30, 80)
         
         # Line drawing area - positioned in upper third of screen
-        self.line_area_top = 120      # Start drawing line below the title (upper third)
-        self.line_area_bottom = 200   # End drawing line in upper third
+        self.line_area_top = 120
+        self.line_area_bottom = 200
         self.line_area_center = (self.line_area_top + self.line_area_bottom) // 2
         
         # Expanding circle animation properties
@@ -78,26 +77,26 @@ class GraphingLineAnimation(QWidget):
         self.circle_center = QPointF(0, 0)
         self.expand_animation_timer = QTimer()
         self.expand_animation_timer.timeout.connect(self.update_expand_animation)
-        self.expand_animation_timer.setInterval(16)  # 60 FPS for smooth expansion
-        self.expand_duration = 1000  # 1 second in milliseconds
+        self.expand_animation_timer.setInterval(16)  # 60 FPS
+        self.expand_duration = 1000
         self.expand_start_time = 0
-        self.expand_frames = 35  # Medium speed: 35 frames (0.58 seconds)
+        self.expand_frames = 35
         
         # Wave animation properties
-        self.wave_offset = 0  # Controls wave movement
-        self.wave_speed = 10   # Pixels per frame for wave movement (increased from 4)
-        self.wave_amplitude = 25  # Height of the wave peaks/troughs (increased from 15)
-        self.wave_frequency = 0.02  # How many waves per pixel (controls wave density)
-        self.wave_bottom_y = 450   # Y position for the bottom of the wave
-        self.wave_color = QColor(255, 255, 255)  # White color for the wave
+        self.wave_offset = 0
+        self.wave_speed = 10
+        self.wave_amplitude = 25
+        self.wave_frequency = 0.02
+        self.wave_bottom_y = 450
+        self.wave_color = QColor(255, 255, 255)
         
         # Probe animation properties
         self.probe_image = None
-        self.probe_rotation_angle = 150  # Current rotation angle in degrees (start 30 degrees lower)
-        self.probe_rotation_speed = 2.0  # Degrees per frame for smooth rotation
-        self.probe_center_x = 225  # X position of the probe center (gimbal point)
-        self.probe_center_y = 340  # Y position of the probe center (gimbal point) - moved higher
-        self.probe_scale = 0.42  # Scale factor for the probe image (reduced by 30% from 0.6)
+        self.probe_rotation_angle = 150
+        self.probe_rotation_speed = 2.0
+        self.probe_center_x = 225
+        self.probe_center_y = 340
+        self.probe_scale = 0.42
         self.needle_tip_offset_x = 160  # X offset from probe center to needle tip (negative = left)
         self.needle_tip_offset_y = 62    # Y offset from probe center to needle tip
         self.gimbal_hole_offset_x = -120  # X offset from probe center to gimbal hole (rotation point)
@@ -435,12 +434,9 @@ class GraphingLineAnimation(QWidget):
             if probe_path.exists():
                 from PyQt6.QtGui import QPixmap
                 self.probe_image = QPixmap(str(probe_path))
-                print(f"Probe image loaded successfully: {probe_path}")
             else:
-                print(f"Probe image not found: {probe_path}")
                 self.probe_image = None
-        except Exception as e:
-            print(f"Error loading probe image: {e}")
+        except Exception:
             self.probe_image = None
     
     def update_probe_rotation(self):
@@ -460,7 +456,6 @@ class GraphingLineAnimation(QWidget):
             
             if distance_to_wave < 10:  # Within 10 pixels of wave surface
                 self.probe_touching_wave = True
-                print(f"Probe touched wave! Distance: {distance_to_wave:.1f}")
                 # Initialize force when contact is made
                 self.probe_force = 0.0
         else:

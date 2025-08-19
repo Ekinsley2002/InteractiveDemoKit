@@ -1,4 +1,3 @@
-# AfmGUI.py
 import time, serial, os
 import numpy as np
 import pyqtgraph as pg
@@ -16,10 +15,7 @@ class CircleOverlay(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)  # Pass through mouse events
-        # Remove the transparency attributes that might be hiding the widget
-        # self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        # self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         
         # Animation properties
         self.circle_radius = 933  # Start with full screen coverage
@@ -27,7 +23,7 @@ class CircleOverlay(QWidget):
         self.shrinking_circle = True
         
         # Set a solid background to ensure visibility
-        self.setStyleSheet("background-color: white;")  # Start with solid white background
+        self.setStyleSheet("background-color: white;")
         
     def update_circle(self, radius):
         """Update the circle radius for animation"""
@@ -48,7 +44,7 @@ class CircleOverlay(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         # Draw white circle that covers the screen and shrinks
-        painter.setPen(Qt.PenStyle.NoPen)  # No outline
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QColor(255, 255, 255))  # White fill
         painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
@@ -87,8 +83,8 @@ class BlueTransitionOverlay(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         # Draw blue circle that expands to fill the screen
-        painter.setPen(Qt.PenStyle.NoPen)  # No outline
-        painter.setBrush(QColor(0, 36, 84))  # #002454 blue fill
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(0, 36, 84))  # #002454
         painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
@@ -123,7 +119,7 @@ class AfmPageWidget(QWidget):
         self.MAX_VALUES_PER_TRIAL = 100
         self.TRIAL_FILE = "trials.txt"
 
-        # ── GUI Setup ─────────────────────────────
+        # GUI setup
         layout = QVBoxLayout(self)
 
         # 1) A dedicated container that will hold BOTH the GraphicsLayoutWidget
@@ -203,41 +199,41 @@ class AfmPageWidget(QWidget):
         self.guess_samples_button = QPushButton("Guess Samples")
         layout.addWidget(self.guess_samples_button)
 
-        # ── State Variables ───────────────────────
+        # State variables
         self.data_t, self.data_deg = [], []
         self.t0, self.deg_filt = None, 0.0
         self.auto_scaled, self.settle_start = False, None
         self.recording, self.recorded_trial_data, self.record_start_time = False, [], None
         self.trial_index = 0
 
-        # ── Load Trials ───────────────────────────
+        # Load trials
         self.load_trials()
 
-        # ── Button Hooks ──────────────────────────
+        # Button connections
         self.record_button.clicked.connect(self.start_recording)
         self.map_button.clicked.connect(self.on_map_button)
         self.clear_trial_file_button.clicked.connect(self.clear_trial_file)
         self.back_button.clicked.connect(self.go_back)
 
-        # ── Timer ─────────────────────────────────
+        # Timer setup
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(self.TIMER_MS)
         
-        # ── Shrinking Circle Animation ─────────────────────
+        # Shrinking circle animation
         self.shrinking_circle = True  # Start with white screen
         self.circle_radius = 933  # Start with full screen coverage
         self.circle_center = QPointF(400, 240)  # Center of screen
         self.shrink_animation_timer = QTimer()
         self.shrink_animation_timer.timeout.connect(self.update_shrink_animation)
         self.shrink_animation_timer.setInterval(16)  # 60 FPS for smooth animation
-        self.shrink_frames = 35  # Same speed as expanding circle (0.58 seconds)
+        self.shrink_frames = 35  # Same speed as expanding circle
         self.shrink_frame_count = 0
         
         # Don't create overlay here - wait until page is shown
         self.circle_overlay = None
         
-        # ── Blue Transition Animation (Going Back) ─────────────────────
+        # Blue transition animation (going back)
         self.blue_transition_timer = QTimer()
         self.blue_transition_timer.timeout.connect(self.update_blue_transition)
         self.blue_transition_timer.setInterval(16)  # 60 FPS for smooth animation

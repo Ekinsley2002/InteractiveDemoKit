@@ -1,10 +1,9 @@
 
-# menu_page.py  – only the top portion needs editing
-from pathlib import Path                        # ← NEW
+from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt, QTimer, QPointF
 from PyQt6.QtGui     import QPixmap, QTransform, QPainter, QColor
-import Config  # Import config to check DEV_MODE
+import Config
 
 
 class YellowCircleOverlay(QWidget):
@@ -43,8 +42,8 @@ class YellowCircleOverlay(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         # Draw yellow circle that covers the screen and shrinks
-        painter.setPen(Qt.PenStyle.NoPen)  # No outline
-        painter.setBrush(QColor(250, 192, 26))  # #FAC01A - your yellow theme color
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(250, 192, 26))  # #FAC01A
         painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
@@ -84,8 +83,8 @@ class BlueCircleOverlay(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         # Draw blue circle that covers the screen and shrinks
-        painter.setPen(Qt.PenStyle.NoPen)  # No outline
-        painter.setBrush(QColor(0, 36, 84))  # #002454 - your blue theme color
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(0, 36, 84))  # #002454
         painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
@@ -146,9 +145,9 @@ class MenuPage(QWidget):
         lay.setSpacing(16)  # Reduced from 20 to save space
         lay.setContentsMargins(0, 0, 0, 0)  # Remove margins to prevent white areas
         
-        # ───────── LOGO ─────────
-        base_dir = Path(__file__).resolve().parent.parent     # folder where menu_page.py lives
-        logo_path = "Images/logoBackground.png"   # works on Windows & Linux
+        # Logo setup
+        base_dir = Path(__file__).resolve().parent.parent
+        logo_path = "Images/logoBackground.png"
 
         logo_lbl = QLabel()
         pix = QPixmap(str(logo_path))                  # always pass str(…) to Qt
@@ -164,8 +163,7 @@ class MenuPage(QWidget):
         logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_lbl.setStyleSheet("background-color: transparent;")  # Ensure logo has no background
         
-        # ───────── ROTATING GEAR ─────────
-        # Load the gear image for rotation
+        # Rotating gear setup
         gear_path = base_dir / "Animation" / "Sprites" / "gearMainMenu.png"
         if gear_path.exists():
             self.original_gear_pixmap = QPixmap(str(gear_path))
@@ -195,7 +193,7 @@ class MenuPage(QWidget):
         self.gear_label.setParent(self)
         self.gear_label.raise_()  # Ensure it's on top of everything
         
-        # ───────── GEAR ROTATION ANIMATION ─────────
+        # Gear rotation animation
         self.rotation_angle = 0  # Current rotation angle in degrees
         self.rotation_speed = 0.5  # Constant slow rotation speed (degrees per frame)
         
@@ -210,7 +208,7 @@ class MenuPage(QWidget):
         # Load and display the initial gear image
         self.update_gear_rotation()
         
-        # ───────── ESCAPE BUTTON (DEV MODE ONLY) ─────────
+        # Escape button (dev mode only)
         if Config.DEV_MODE:
             # Create escape button for development mode - completely independent styling
             self.escape_button = QPushButton("ESC", self)
@@ -245,7 +243,7 @@ class MenuPage(QWidget):
             
             self.escape_button.clicked.connect(self.quit_app)
         
-        # ───────── HEADLINE ─────────
+        # Headline
         headline = QLabel("Welcome to the Interactive Demo Kit!")
         headline.setObjectName("IntroLabel")
         headline.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -286,12 +284,11 @@ class MenuPage(QWidget):
 
         lay.addStretch()
         
-        # ───────── CIRCLE OVERLAY ANIMATION SETUP ─────────
-        # Setup timers and properties for circle overlays
+        # Circle overlay animation setup
         self.shrink_animation_timer = QTimer()
         self.shrink_animation_timer.timeout.connect(self.update_shrink_animation)
         self.shrink_animation_timer.setInterval(16)  # 60 FPS for smooth animation
-        self.shrink_frames = 20  # 0.33 seconds (20 frames at 60 FPS)
+        self.shrink_frames = 20  # 0.33 seconds
         self.shrink_frame_count = 0
         
         # Don't create overlays automatically - they will be created by specific functions

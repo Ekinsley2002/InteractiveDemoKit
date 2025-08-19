@@ -1,10 +1,8 @@
-# HapticFeedbackGUI.py
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt, pyqtSignal
 from PyQt6.QtGui     import QPixmap
 
-# Get the styles directory
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STYLES_DIR   = PROJECT_ROOT / "Styles"
 

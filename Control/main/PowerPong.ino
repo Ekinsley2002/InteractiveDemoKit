@@ -1,4 +1,4 @@
-# include <SimpleFOC.h>
+#include <SimpleFOC.h>
 
 // velocity set point variable
 float target_velocity = 2;
@@ -11,56 +11,56 @@ void doMove270(char* cmd);
 void doResetZero(char* cmd);
 
 void setupPowerPong() {
-  // Set D7 as to low as a ground for the SimpleFOC V1.0 mini board
+  // Set D7 as ground for SimpleFOC V1.0 mini board
   int pin = 7;
-  pinMode(pin, OUTPUT);  // Set the pin as an output
-  digitalWrite(pin, LOW);  // Set the pin to LOW
+  pinMode(pin, OUTPUT);
+  digitalWrite(pin, LOW);
 
   // Initialize the onboard LED pin as an output
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
-  // initialise magnetic sensor hardware
+  // Initialize magnetic sensor hardware
   sensor.init();
   
-  // link the motor to the sensor
+  // Link the motor to the sensor
   motor.linkSensor(&sensor);
 
-  // driver config - power supply voltage [V]
+  // Driver configuration
   driver.voltage_power_supply = 12;
   driver.init();
   
-  // link the motor and the driver
+  // Link the motor and the driver
   motor.linkDriver(&driver);
 
-  // set motion control loop to be used
+  // Set motion control loop
   motor.controller = MotionControlType::velocity;
 
-  // velocity PI controller parameters
+  // Velocity PI controller parameters
   motor.PID_velocity.P = 0.25f;
   motor.PID_velocity.I = 2;
   motor.PID_velocity.D = 0;
   
-  // default voltage_power_supply
+  // Voltage limit
   motor.voltage_limit = 12;
   
-  // jerk control using voltage voltage ramp
+  // Jerk control using voltage ramp
   motor.PID_velocity.output_ramp = 10000;
 
-  // velocity low pass filtering
+  // Velocity low pass filtering
   motor.LPF_velocity.Tf = 0.01f;
 
-  // use monitoring with serial
+  // Use monitoring with serial
   Serial.begin(115200);
   motor.useMonitoring(Serial);
 
-  // initialize motor
+  // Initialize motor
   motor.init();
   
-  // align sensor and start FOC
+  // Align sensor and start FOC
   motor.initFOC();
 
-  // add commands
+  // Add commands
   command.add('T', doTarget, "target velocity");
   command.add('M', doMove270, "move 270 degrees and back");
   command.add('R', doResetZero, "reset zero point");
@@ -72,23 +72,22 @@ void powerPongLoop() {
   
   int code = checkCode();       // –1 means “nothing new”
 
-  if (code >= 0) {              // only act if we *did* read something
+  if (code >= 0) {
     switch (code) {
       case MAIN_MENU:
       case POWER_PONG:
-        return;                 // leave AFM mode
+        return;
       case AFM:
-        /* stay here */         // do nothing special
         break;
     }
   }
-  // main FOC algorithm function
+  // Main FOC algorithm function
   motor.loopFOC();
 
   // Motion control function
   motor.move(0);
 
-  // user communication
+  // User communication
   command.run();
 }
 
@@ -126,13 +125,7 @@ void doMove270(char* cmd) {
 
 void doResetZero(char* cmd) {
 
-  // Skip the first character ('R') and parse the rest as the offset value
-  //float offset = atof(cmd + 1);
   float offset = 0;
-
-  // Print the offset for debugging
-  Serial.print("Moving to Offset: ");
-  Serial.println(offset, 4);
 
   // Calculate the new zero point by adding the offset to the current zero point
   float new_zero = 4.38;

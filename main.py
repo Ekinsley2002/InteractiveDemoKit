@@ -1,12 +1,7 @@
-# main.py  –  app entry point & page router
 import os, sys, pathlib, serial, time
 import Config
 
-# ── HARD-CODED DPI / SCALE SETTINGS ────────────────────────────────────
-#
-#  ⚠️  These three env-vars must be set *before* the QApplication exists.
-#      They turn off every automatic scaling feature Qt knows about.
-#
+# DPI / Scale settings - must be set before QApplication exists
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
 os.environ["QT_SCALE_FACTOR"]            = "1"
 os.environ["QT_ENABLE_HIGHDPI_SCALING"]  = "0"
@@ -15,7 +10,6 @@ from PyQt6.QtCore import Qt, QCoreApplication, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt6.QtGui import QCursor
 
-# ── IMPORT GUI PAGES AFTER SCALE SETTINGS ─────────────────────────────
 from GUI.MainMenuGUI   import MenuPage
 from GUI.AfmGUI        import AfmPageWidget
 from GUI.TopographyGUI import TopographyPageWidget
@@ -33,61 +27,53 @@ class MainWindow(QMainWindow):
 
         self.BAUD = 115_200
         
-        # Check to see which device to use
+        # Platform-specific port configuration
         if Config.DEVICE == "Mac":
             self.PORT = "/dev/cu.usbmodem14101"
-
         elif Config.DEVICE == "Linux":
             self.PORT = "/dev/ttyACM0"
             self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
             self.showFullScreen()
             self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
-
         elif Config.DEVICE == "Windows":
             self.PORT = "COM4"
 
-        # Check to see if using board, if not, set up fake serial
+        # Serial connection setup
         if Config.BOARDLESS:
             self.ser = serial.serial_for_url("loop://", timeout=1)
         else:
-            self.ser  = serial.Serial(self.PORT, self.BAUD, timeout=1)
+            self.ser = serial.Serial(self.PORT, self.BAUD, timeout=1)
 
         self.setWindowTitle("Interactive Demo Kit")
 
-        # ▸ Fix the window at EXACTLY 800×480 and remove the maximise box
+        # Window configuration
         self.setFixedSize(800, 480)
         self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, False)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
 
-        # ── stacked-page container ──────────────────────────────────
+        # Page container
         self.stack = QStackedWidget(self)
         
-        # Set the main window background to blue
+        # Main window styling
         self.setStyleSheet("""
             QMainWindow {
                 background-color: #002454;
             }
         """)
         
-        # Start with startup animation as the central widget
+        # Startup animation setup
         self.startup_animation = StartupAnimation()
         self.startup_animation.animation_complete.connect(self.transition_to_main_menu)
         self.setCentralWidget(self.startup_animation)
-        
-        # Start the startup animation
         self.startup_animation.start_animation()
 
-        # Don't create main menu pages yet - wait until startup animation completes
-        # This prevents the white circle and other elements from bleeding through
+        # Initialize page references (created after startup animation)
         self.menu_page = None
         self.afm_page = None
         self.topo_page = None
         self.power_pong_page = None
         self.haptic_feedback_page = None
         self.spring_dampener_page = None
-
-        # Don't show the main menu immediately - wait for startup animation
-        # self.stack.setCurrentWidget(self.menu_page)  # Commented out
 
     def transition_to_main_menu(self):
         """Seamlessly transition from startup animation to main menu"""

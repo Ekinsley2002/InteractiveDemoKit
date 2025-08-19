@@ -1,16 +1,13 @@
-# power_pong_page.py
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt, QSize, pyqtSignal, QTimer, QPointF
 from PyQt6.QtGui     import QIcon, QCursor, QPainter, QColor, QPen
 
-# -------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMAGES_DIR   = Path("Images")
 STYLES_DIR   = PROJECT_ROOT / "Styles"
 
 
-# ────────────────────────────────────────────────────────────────
 class Picker(QWidget):
     """One vertical picker column with ▲ / ▼ / Add."""
     value_added = pyqtSignal(int)          # emits the *current* value
@@ -48,7 +45,6 @@ class Picker(QWidget):
         v.addStretch(1)
         v.addWidget(add_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-    # helpers ------------------------------------------------------
     def _make_arrow(self, filename: str, delta: int) -> QPushButton:
         path = IMAGES_DIR / filename
         btn  = QPushButton()
@@ -74,7 +70,7 @@ class CircleOverlay(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)  # Pass through mouse events
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         
         # Animation properties
         self.circle_radius = 933  # Start with full screen coverage
@@ -82,7 +78,7 @@ class CircleOverlay(QWidget):
         self.shrinking_circle = True
         
         # Set a solid background to ensure visibility
-        self.setStyleSheet("background-color: white;")  # Start with solid white background
+        self.setStyleSheet("background-color: white;")
         
     def update_circle(self, radius):
         """Update the circle radius for animation"""
@@ -147,7 +143,6 @@ class WhiteTransitionOverlay(QWidget):
         painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
-# ────────────────────────────────────────────────────────────────
 class PowerPongPageWidget(QWidget):
     """
     Shows the Power-Pong controls and forwards user actions to the Arduino
@@ -173,7 +168,7 @@ class PowerPongPageWidget(QWidget):
         title.setObjectName("Title")
         root.addWidget(title)
 
-        # ───────── PICKERS + FORE ROW ─────────
+        # Picker controls
         row = QHBoxLayout(); row.setSpacing(40)
 
         self.speed_picker  = Picker("Speed")
@@ -209,30 +204,30 @@ class PowerPongPageWidget(QWidget):
         row.addStretch(1)
         root.addLayout(row, stretch=1)
 
-        # ───────── BACK ─────────
+        # Back button
         back_btn = QPushButton("Back")
         back_btn.setObjectName("BackBtn")
         back_btn.clicked.connect(self.go_back)
         root.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        # ───────── QSS ─────────
+        # Load stylesheet
         css_file = STYLES_DIR / "stylePowerPongPage.qss"
         self.setStyleSheet(css_file.read_text())
         
-        # ───────── Shrinking Circle Animation ─────────────────────
+        # Shrinking circle animation
         self.shrinking_circle = True  # Start with white screen
         self.circle_radius = 933  # Start with full screen coverage
         self.circle_center = QPointF(400, 240)  # Center of screen
         self.shrink_animation_timer = QTimer()
         self.shrink_animation_timer.timeout.connect(self.update_shrink_animation)
         self.shrink_animation_timer.setInterval(16)  # 60 FPS for smooth animation
-        self.shrink_frames = 35  # Same speed as expanding circle (0.58 seconds)
+        self.shrink_frames = 35  # Same speed as expanding circle
         self.shrink_frame_count = 0
         
         # Don't create overlay here - wait until page is shown
         self.circle_overlay = None
         
-        # ───────── White Transition Animation (Going Back) ─────────────────────
+        # White transition animation (going back)
         self.white_transition_timer = QTimer()
         self.white_transition_timer.timeout.connect(self.update_white_transition)
         self.white_transition_timer.setInterval(16)  # 60 FPS for smooth animation
@@ -243,13 +238,13 @@ class PowerPongPageWidget(QWidget):
         # Don't create white transition overlay here - wait until needed
         self.white_transition_overlay = None
 
-    # ───────────────────────── Commander helpers ─────────────────────────────
+    # Serial communication helpers
     def _write(self, text: str):
         """
         Low-level send. Falls back to a console print when no port present.
         """
         if self.ser is None:
-            print("→", text.strip())                 # boardless mode
+            print("→", text.strip())
             return
         self.ser.write(text.encode())                # includes trailing \n
         self.ser.flush()
@@ -268,7 +263,7 @@ class PowerPongPageWidget(QWidget):
         current_offset = 90
         self._write(f"R{current_offset}\n")
         
-    # ───────────────────────── Animation Methods ─────────────────────────────
+    # Animation methods
     def _reset_shrink_animation(self):
         """Reset the shrinking circle animation to initial state"""
         self.shrink_frame_count = 0
