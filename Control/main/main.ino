@@ -22,6 +22,7 @@ static float angleFilt = ZERO_RAD;
 #define MAIN_MENU 0
 #define AFM 1
 #define POWER_PONG 2
+#define SPRING_DAMPENER 4
 
 /**
  * Random 0.00 – 0.10 to Serial
@@ -59,7 +60,16 @@ void loop() {
     case POWER_PONG:
       afm_initialised = false;
       runPowerPong();
+    case SPRING_DAMPENER:
+      runSpringDampener();
+      afm_initialised = false;
+      return;
   }
+}
+
+void runSpringDampener() {
+  setupSpringDampener();
+  springDampenerLoop();
 }
 
 int checkCode() {

@@ -1,0 +1,46 @@
+/* Haptic Feedback Page Stylesheet */
+
+QWidget#HapticFeedbackPage {
+    background-color: #002454;
+    color: #FFFFFF;
+}
+
+QLabel#Title {
+    font: 600 32px 'Roboto';
+    color: #FAC01A;
+    margin: 20px 0px;
+}
+
+QLabel#ContentLabel {
+    font: 400 16px 'Roboto';
+    color: #CEF9F2;
+    margin: 40px 20px;
+    padding: 20px;
+    border: 2px solid #FAC01A;
+    border-radius: 12px;
+    background-color: rgba(0, 52, 132, 0.3);
+}
+
+QPushButton {
+    font: 600 18px 'Roboto';
+    color: #FFFFFF;
+    background-color: #003366;
+    border: 2px solid #FAC01A;
+    border-radius: 8px;
+    padding: 12px 24px;
+    min-width: 200px;
+}
+
+QPushButton:hover {
+    background-color: #004477;
+    border: 2px solid #FFCC33;
+}
+
+QPushButton:pressed {
+    background-color: #002255;
+    border: 2px solid #FAC01A;
+}
+
+QPushButton#BackBtn {
+    margin: 20px 0px;
+}

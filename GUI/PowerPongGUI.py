@@ -1,8 +1,8 @@
 # power_pong_page.py
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-from PyQt6.QtCore    import Qt, QSize, pyqtSignal
-from PyQt6.QtGui     import QIcon, QCursor
+from PyQt6.QtCore    import Qt, QSize, pyqtSignal, QTimer, QPointF
+from PyQt6.QtGui     import QIcon, QCursor, QPainter, QColor, QPen
 
 # -------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -67,6 +67,84 @@ class Picker(QWidget):
 
     def _emit_add(self):
         self.value_added.emit(self._value)
+
+
+class CircleOverlay(QWidget):
+    """Separate overlay widget for the shrinking circle animation"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)  # Pass through mouse events
+        
+        # Animation properties
+        self.circle_radius = 933  # Start with full screen coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.shrinking_circle = True
+        
+        # Set a solid background to ensure visibility
+        self.setStyleSheet("background-color: white;")  # Start with solid white background
+        
+    def update_circle(self, radius):
+        """Update the circle radius for animation"""
+        self.circle_radius = radius
+        self.update()
+        
+    def set_animation_state(self, active):
+        """Set whether the animation is active"""
+        self.shrinking_circle = active
+        self.update()
+        
+    def paintEvent(self, event):
+        """Draw the shrinking white circle overlay"""
+        if not self.shrinking_circle:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw white circle that covers the screen and shrinks
+        painter.setPen(Qt.PenStyle.NoPen)  # No outline
+        painter.setBrush(QColor(255, 255, 255))  # White fill
+        painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
+
+
+class WhiteTransitionOverlay(QWidget):
+    """Overlay widget for the white transition when going back to main menu"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        
+        # Animation properties
+        self.circle_radius = 0  # Start with no coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.expanding_circle = False
+        
+        # Set transparent background
+        self.setStyleSheet("background-color: transparent;")
+        
+    def update_circle(self, radius):
+        """Update the circle radius for animation"""
+        self.circle_radius = radius
+        self.update()
+        
+    def set_animation_state(self, active):
+        """Set whether the animation is active"""
+        self.expanding_circle = active
+        self.update()
+        
+    def paintEvent(self, event):
+        """Draw the expanding white circle overlay"""
+        if not self.expanding_circle:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw white circle that expands to fill the screen
+        painter.setPen(Qt.PenStyle.NoPen)  # No outline
+        painter.setBrush(QColor(255, 255, 255))  # White fill
+        painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
 # ────────────────────────────────────────────────────────────────
@@ -134,12 +212,36 @@ class PowerPongPageWidget(QWidget):
         # ───────── BACK ─────────
         back_btn = QPushButton("Back")
         back_btn.setObjectName("BackBtn")
-        back_btn.clicked.connect(self.back_requested.emit)
+        back_btn.clicked.connect(self.go_back)
         root.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # ───────── QSS ─────────
         css_file = STYLES_DIR / "stylePowerPongPage.qss"
         self.setStyleSheet(css_file.read_text())
+        
+        # ───────── Shrinking Circle Animation ─────────────────────
+        self.shrinking_circle = True  # Start with white screen
+        self.circle_radius = 933  # Start with full screen coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.shrink_animation_timer = QTimer()
+        self.shrink_animation_timer.timeout.connect(self.update_shrink_animation)
+        self.shrink_animation_timer.setInterval(16)  # 60 FPS for smooth animation
+        self.shrink_frames = 35  # Same speed as expanding circle (0.58 seconds)
+        self.shrink_frame_count = 0
+        
+        # Don't create overlay here - wait until page is shown
+        self.circle_overlay = None
+        
+        # ───────── White Transition Animation (Going Back) ─────────────────────
+        self.white_transition_timer = QTimer()
+        self.white_transition_timer.timeout.connect(self.update_white_transition)
+        self.white_transition_timer.setInterval(16)  # 60 FPS for smooth animation
+        self.white_transition_frames = 30  # 0.5 seconds
+        self.white_transition_frame_count = 0
+        self.white_transition_active = False
+        
+        # Don't create white transition overlay here - wait until needed
+        self.white_transition_overlay = None
 
     # ───────────────────────── Commander helpers ─────────────────────────────
     def _write(self, text: str):
@@ -165,3 +267,127 @@ class PowerPongPageWidget(QWidget):
         # Send command in SimpleFOC Commander format: "R {offset}"
         current_offset = 90
         self._write(f"R{current_offset}\n")
+        
+    # ───────────────────────── Animation Methods ─────────────────────────────
+    def _reset_shrink_animation(self):
+        """Reset the shrinking circle animation to initial state"""
+        self.shrink_frame_count = 0
+        self.shrinking_circle = True
+        self.circle_radius = 933  # Full screen coverage
+        if hasattr(self, 'shrink_animation_timer'):
+            self.shrink_animation_timer.stop()
+            
+    def update_shrink_animation(self):
+        """Update the shrinking circle animation"""
+        self.shrink_frame_count += 1
+        
+        # Calculate progress (0.0 to 1.0) - reverse of expanding circle
+        progress = 1.0 - (self.shrink_frame_count / self.shrink_frames)
+        progress = max(0.0, progress)  # Don't go below 0
+        
+        # Calculate radius based on progress
+        max_radius = 933
+        self.circle_radius = progress * max_radius
+        
+        # Update the overlay widget if it exists
+        if self.circle_overlay is not None:
+            self.circle_overlay.update_circle(self.circle_radius)
+            
+            # Check if shrinking is complete
+            if self.shrink_frame_count >= self.shrink_frames:
+                self.shrink_animation_timer.stop()
+                self.shrinking_circle = False
+                self.circle_overlay.set_animation_state(False)  # Hide the overlay
+                
+    def _reset_white_transition(self):
+        """Reset the white transition animation to initial state"""
+        self.white_transition_frame_count = 0
+        self.white_transition_active = False
+        if hasattr(self, 'white_transition_timer'):
+            self.white_transition_timer.stop()
+            
+    def update_white_transition(self):
+        """Update the white transition animation when going back"""
+        self.white_transition_frame_count += 1
+        
+        # Calculate progress (0.0 to 1.0)
+        progress = min(self.white_transition_frame_count / self.white_transition_frames, 1.0)
+        
+        # Calculate radius based on progress - expand from center to fill screen
+        max_radius = 933  # Full screen coverage
+        self.white_transition_radius = progress * max_radius
+        
+        # Update the white overlay widget if it exists
+        if self.white_transition_overlay is not None:
+            self.white_transition_overlay.update_circle(self.white_transition_radius)
+            
+            # Check if expansion is complete
+            if self.white_transition_frame_count >= self.white_transition_frames:
+                self.white_transition_timer.stop()
+                self.white_transition_active = False
+                
+                # Now that the white circle has filled the screen, emit the back signal
+                # This will trigger the page transition to main menu
+                self.back_requested.emit()
+                
+    def go_back(self):
+        """User hit Back -> start white transition animation, then switch to menu."""
+        # Clean up shrinking animation state
+        if self.circle_overlay is not None:
+            self.shrink_animation_timer.stop()
+            self.circle_overlay.hide()
+            
+        # Clean up white transition animation state
+        if hasattr(self, 'white_transition_timer'):
+            self.white_transition_timer.stop()
+        
+        # Start the white transition animation
+        self._start_white_transition()
+        
+    def _start_white_transition(self):
+        """Start the white circle expansion animation when going back"""
+        # Create the white transition overlay
+        self.white_transition_overlay = WhiteTransitionOverlay(self)
+        self.white_transition_overlay.setFixedSize(800, 480)
+        self.white_transition_overlay.move(0, 0)  # Position at top-left corner
+        self.white_transition_overlay.raise_()  # Ensure it's on top of everything
+        self.white_transition_overlay.show()  # Show the overlay
+        
+        # Reset animation state
+        self.white_transition_frame_count = 0
+        self.white_transition_active = True
+        
+        # Activate the white overlay
+        self.white_transition_overlay.set_animation_state(True)
+        
+        # Start the animation timer
+        self.white_transition_timer.start()
+
+    def showEvent(self, event):
+        """Override showEvent to trigger the white screen collapse animation"""
+        super().showEvent(event)
+        
+        # Always reset and recreate the overlays when the page is shown
+        # This ensures the animations work every time
+        
+        # Clean up existing white shrinking overlay
+        if self.circle_overlay is not None:
+            self.circle_overlay.deleteLater()
+            self.circle_overlay = None
+            
+        # Clean up existing white transition overlay (from previous visits)
+        if hasattr(self, 'white_transition_overlay') and self.white_transition_overlay is not None:
+            self.white_transition_overlay.deleteLater()
+            self.white_transition_overlay = None
+        
+        # Create fresh white shrinking overlay
+        self.circle_overlay = CircleOverlay(self)
+        self.circle_overlay.setFixedSize(800, 480)
+        self.circle_overlay.move(0, 0)  # Position at top-left corner
+        self.circle_overlay.raise_()  # Ensure it's on top of everything
+        self.circle_overlay.show()  # Explicitly show the overlay
+        
+        # Reset animation state and start the shrinking animation
+        self._reset_shrink_animation()
+        self._reset_white_transition()  # Also reset white transition state
+        self.shrink_animation_timer.start()

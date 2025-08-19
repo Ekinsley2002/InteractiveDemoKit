@@ -20,7 +20,8 @@ from GUI.MainMenuGUI   import MenuPage
 from GUI.AfmGUI        import AfmPageWidget
 from GUI.TopographyGUI import TopographyPageWidget
 from GUI.PowerPongGUI  import PowerPongPageWidget
-from GUI.MotorFunGUI    import MotorFunPageWidget
+from GUI.HapticFeedbackGUI import HapticFeedbackPageWidget
+from GUI.SpringDampenerGUI    import SpringDampenerPageWidget
 from Animation.StartupAnimation import StartupAnimation
 from Animation.GraphingLineAnimation import GraphingLineAnimation
 from Animation.PowerPongTransitionAnimation import PowerPongTransitionAnimation
@@ -82,7 +83,8 @@ class MainWindow(QMainWindow):
         self.afm_page = None
         self.topo_page = None
         self.power_pong_page = None
-        self.motor_fun_page = None
+        self.haptic_feedback_page = None
+        self.spring_dampener_page = None
 
         # Don't show the main menu immediately - wait for startup animation
         # self.stack.setCurrentWidget(self.menu_page)  # Commented out
@@ -130,19 +132,23 @@ class MainWindow(QMainWindow):
         # page 3 → Power-Pong
         self.power_pong_page = PowerPongPageWidget(self.ser)
         self.stack.addWidget(self.power_pong_page)
-        self.power_pong_page.back_requested.connect(
+        self.power_pong_page.back_requested.connect(self.complete_power_pong_back_transition)
+
+        # page 4 → Haptic Feedback
+        self.haptic_feedback_page = HapticFeedbackPageWidget()
+        self.stack.addWidget(self.haptic_feedback_page)
+        self.menu_page.haptic_btn.clicked.connect(
+            lambda: self.stack.setCurrentWidget(self.haptic_feedback_page)
+        )
+        self.haptic_feedback_page.back_requested.connect(
             lambda: self.stack.setCurrentWidget(self.menu_page)
         )
 
-        # page 4 → Fun-with-Motors (re-uses PowerPong widget for now)
-        self.motor_fun_page = MotorFunPageWidget()
-        self.stack.addWidget(self.motor_fun_page)
-        self.menu_page.mtrfun_btn.clicked.connect(
-            lambda: self.stack.setCurrentWidget(self.motor_fun_page)
-        )
-        self.motor_fun_page.back_requested.connect(
-            lambda: self.stack.setCurrentWidget(self.menu_page)
-        )
+        # page 5 → Spring Dampener Tuning Page
+        self.spring_dampener_page = SpringDampenerPageWidget(self.ser)
+        self.stack.addWidget(self.spring_dampener_page)
+        self.menu_page.spgdmp_btn.clicked.connect(self.show_spring_dampener)
+        self.spring_dampener_page.back_requested.connect(self.spring_dampener_back)
         
     def show_afm_transition(self):
         """Show AFM transition animation before switching to AFM page"""
@@ -213,6 +219,34 @@ class MainWindow(QMainWindow):
         
         # Switch to Power Pong page
         self.stack.setCurrentWidget(self.power_pong_page)
+
+    def complete_power_pong_back_transition(self):
+        """Called when coming back from Power Pong page to main menu"""
+        # Switch to main menu page
+        self.stack.setCurrentWidget(self.menu_page)
+        
+        # Start the white circle shrinking animation (coming back from Power Pong)
+        self.menu_page.start_white_circle_animation()
+
+    def show_spring_dampener(self):
+        """Send Spring Dampener command to Arduino and switch to Spring Dampener page"""
+        
+        # Send Spring Dampener command to Arduino (4 = Spring Dampener mode)
+        self.ser.write(b"\x04")
+        self.ser.flush()
+        
+        # Switch directly to Spring Dampener page (no transition animation)
+        self.stack.setCurrentWidget(self.spring_dampener_page)
+
+    def spring_dampener_back(self):
+        """Send stop command to Arduino and return to main menu from Spring Dampener page"""
+        
+        # Send stop command to Arduino (0 = stop/idle mode)
+        self.ser.write(b"\x00")
+        self.ser.flush()
+        
+        # Switch back to main menu
+        self.stack.setCurrentWidget(self.menu_page)
 
 
 def main():

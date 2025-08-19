@@ -69,7 +69,19 @@ void setupPowerPong() {
 }
 
 void powerPongLoop() {
+  
+  int code = checkCode();       // –1 means “nothing new”
 
+  if (code >= 0) {              // only act if we *did* read something
+    switch (code) {
+      case MAIN_MENU:
+      case POWER_PONG:
+        return;                 // leave AFM mode
+      case AFM:
+        /* stay here */         // do nothing special
+        break;
+    }
+  }
   // main FOC algorithm function
   motor.loopFOC();
 

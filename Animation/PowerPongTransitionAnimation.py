@@ -5,18 +5,30 @@
 # - paddle_hit_rotation_angle: How many degrees the paddle rotates down (default: 35)
 # - paddle_hit_animation_speed: Frames for the hit animation, lower = faster (default: 8)
 # - paddle_hit_return_speed: Frames for the return animation, lower = faster (default: 12)
-# - paddle_hit_trigger_distance: Distance above paddle where swing animation starts (default: 80)
+# - paddle_hit_trigger_distance: Distance above paddle where swing animation starts (ball triggers swing when this close)
+# - first_swing_delay_frames: Frames to wait before starting the first swing (timer-based control)
+#
+# HYBRID PADDLE HIT SYSTEM:
+# - First swing: Timer-based (precise control over initial drop swing)
+# - Second & Third swings: Distance-based (automatic when ball approaches paddle)
+# - Easy to adjust: change first_swing_delay_frames to control when first swing happens
+#
+# BALL PHYSICS: All bounces (1st, 2nd, 3rd) now reach exactly the same height (Y=240)
+# - First drop starts with no initial velocity for consistent physics
+# - Each bounce uses the same velocity calculation to reach center
+# - No frame skipping or jumping - smooth, consistent animation
+# - Final paddle rotation (paddle1-16.png) is completely protected from ball physics interference
 #
 # The paddle will perform a swing animation 4 times total:
-# 1. When the ball is approaching the paddle from the top (80 pixels above)
-# 2. When the ball is approaching after the 1st bounce
-# 3. When the ball is approaching after the 2nd bounce  
-# 4. When the ball is approaching after the 3rd bounce
+# 1. First swing: After first_swing_delay_frames (timer-controlled)
+# 2. When the ball is approaching after the 1st bounce (distance-based)
+# 3. When the ball is approaching after the 2nd bounce (distance-based)
+# 4. When the ball is approaching after the 3rd bounce (distance-based)
 #
 # Each swing animation: paddle drops down + rotates clockwise (preparing for hit), 
 # then returns up + rotates counter-clockwise (recovery)
 #
-# The swing starts BEFORE the ball hits, making it look like the paddle is preparing for the shot
+# TIMING CONTROL: Adjust first_swing_delay_frames to control exactly when the first swing happens!
 #
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPointF
@@ -45,7 +57,7 @@ class PowerPongTransitionAnimation(QWidget):
         # Ball properties
         self.ball_radius = 30
         self.ball_pos = QPointF(400, 50)  # Start at top center
-        self.ball_velocity = QPointF(0, 3)  # Initial downward velocity
+        self.ball_velocity = QPointF(0, 0)  # Start with no velocity for consistent physics
         self.gravity = 0.25
         self.bounce_count = 0  # Track number of bounces
         self.expanding = False  # Track if ball is expanding
@@ -68,11 +80,12 @@ class PowerPongTransitionAnimation(QWidget):
         self.paddle_movement_step = 0  # Current movement step (0 to 15)
         
         # ───────── ADJUSTABLE PADDLE HITTING ANIMATION PARAMETERS ─────────
-        self.paddle_hit_drop_distance = 50      # How many pixels the paddle drops down (increased for more dramatic swing)
+        self.paddle_hit_drop_distance = 40      # How many pixels the paddle drops down (increased for more dramatic swing)
         self.paddle_hit_rotation_angle = 20     # How many degrees the paddle rotates down (increased for more dramatic swing)
-        self.paddle_hit_animation_speed = 13     # Frames for the hit animation (lower = faster)
-        self.paddle_hit_return_speed = 13       # Frames for the return animation (lower = faster)
-        self.paddle_hit_trigger_distance = 180   # Distance above paddle where animation starts (ball triggers swing when this close)
+        self.paddle_hit_animation_speed = 14     # Frames for the hit animation (lower = faster)
+        self.paddle_hit_return_speed = 14       # Frames for the return animation (lower = faster)
+        self.paddle_hit_trigger_distance = 140   # Distance above paddle where animation starts (ball triggers swing when this close)
+        self.first_swing_delay_frames = 28    # Frames to wait before starting the first swing (timer-based control)
         
         # Paddle hitting animation state
         self.paddle_hit_active = False
@@ -84,6 +97,13 @@ class PowerPongTransitionAnimation(QWidget):
         self.paddle_hit_start_y = self.paddle_start_y
         self.paddle_hit_start_rotation = 0
         self.paddle_hit_triggered = False  # Track if we've already triggered the hit for this bounce
+        
+        # First swing timer system
+        self.first_swing_timer = None
+        self.first_swing_frame_count = 0
+        self.first_swing_completed = False
+        self.first_swing_active = False
+        
         self.paddle_pivot_x = 60
         self.paddle_pivot_y = 340
         # Debug: print initial paddle position
@@ -147,10 +167,20 @@ class PowerPongTransitionAnimation(QWidget):
         self.ball_timer.timeout.connect(self.update_ball)
         self.ball_timer.setInterval(16)  # 60 FPS for smooth animation
         
+        # First swing timer for initial drop swing
+        self.first_swing_timer = QTimer()
+        self.first_swing_timer.timeout.connect(self.update_first_swing_timer)
+        self.first_swing_timer.setInterval(16)  # 60 FPS for smooth timing
+        
         # Transition timer
         self.transition_timer = QTimer()
         self.transition_timer.timeout.connect(self.complete_transition)
         self.transition_duration = 10000  # 3 seconds for testing
+        
+        # Expansion timer for ball expansion animation
+        self.expand_timer = QTimer()
+        self.expand_timer.timeout.connect(self.handle_expansion)
+        self.expand_timer.setInterval(16)  # 60 FPS for smooth expansion (matching other animations)
         
     def start_animation(self):
         """Start the Power Pong transition animation"""
@@ -165,11 +195,48 @@ class PowerPongTransitionAnimation(QWidget):
         # Start ball physics animation
         self.ball_timer.start()
         
+        # Start first swing timer for initial drop swing
+        self.first_swing_active = True
+        self.first_swing_frame_count = 0
+        self.first_swing_completed = False
+        self.first_swing_timer.start()
+        print(f"First swing timer started - will trigger after {self.first_swing_delay_frames} frames")
+        
         # Start timer to complete transition
         self.transition_timer.start(self.transition_duration)
         
+    def update_first_swing_timer(self):
+        """Timer-based control for the first swing (initial drop)"""
+        if not self.first_swing_active or self.first_swing_completed:
+            return
+            
+        self.first_swing_frame_count += 1
+        
+        # Safety check: prevent ball from going below paddle during first swing
+        if self.ball_pos.y() + self.ball_radius > self.paddle_current_y + 190:
+            self.ball_pos.setY(self.paddle_current_y + 190 - self.ball_radius)
+            self.ball_velocity.setY(0)
+            print("First swing: Ball hit paddle boundary, resetting position")
+        
+        # Check if it's time to start the first swing
+        if self.first_swing_frame_count >= self.first_swing_delay_frames:
+            # Start the first swing animation
+            if not self.paddle_hit_active and not self.paddle_hit_triggered:
+                self.start_paddle_hit_animation()
+                self.paddle_hit_triggered = True  # Mark as triggered
+                print(f"First swing triggered at frame {self.first_swing_frame_count}")
+                
+                # Mark first swing as completed and stop the timer
+                self.first_swing_completed = True
+                self.first_swing_active = False
+                self.first_swing_timer.stop()
+        
     def update_ball(self):
         """Update ball position and handle collisions"""
+        # Safety check: if ball timer is stopped, don't update physics
+        if not self.ball_timer.isActive():
+            return
+            
         # If expanding, handle expansion animation
         if self.expanding:
             self.handle_expansion()
@@ -182,20 +249,64 @@ class PowerPongTransitionAnimation(QWidget):
         self.ball_pos.setX(self.ball_pos.x() + self.ball_velocity.x())
         self.ball_pos.setY(self.ball_pos.y() + self.ball_velocity.y())
         
+        # Check if ball has reached the center (peak of 3rd bounce) and should expand
+        if (self.bounce_count >= 3 and 
+            self.ball_pos.y() <= 240 and 
+            self.ball_velocity.y() <= 0 and
+            not self.expanding):
+            
+            # Ball has reached center after 3rd bounce, start expansion
+            print(f"Ball reached center! Position: ({self.ball_pos.x()}, {self.ball_pos.y()}), Velocity: ({self.ball_velocity.x()}, {self.ball_velocity.y()})")
+            self.expanding = True
+            self.expand_radius = 0
+            self.expand_timer.start(16)  # 60 FPS for smooth expansion (matching other animations)
+            
+            # Stop ball physics now that it has reached center
+            self.ball_timer.stop()
+            print("Ball reached center, starting expansion animation and stopping physics")
+            return
+        
+        # Debug: Track ball position after 3rd bounce
+        if self.bounce_count >= 3 and not self.expanding:
+            print(f"Ball heading to center: Position ({self.ball_pos.x()}, {self.ball_pos.y()}), Velocity ({self.ball_velocity.x()}, {self.ball_velocity.y()})")
+        
+        # Safety check: prevent ball from going below screen bounds
+        if self.ball_pos.y() + self.ball_radius > 480:  # Screen height is 480
+            self.ball_pos.setY(480 - self.ball_radius)
+            self.ball_velocity.setY(0)  # Stop downward movement
+            print("Ball hit bottom boundary, resetting position")
+        
         # Check if ball is approaching the paddle and trigger swing animation
-        paddle_y_position = 380  # Y position where ball hits paddle
-        if (self.ball_pos.y() + self.ball_radius >= paddle_y_position - self.paddle_hit_trigger_distance and 
+        # Use the paddle's actual current Y position for accurate trigger detection
+        paddle_y_position = self.paddle_current_y + 190  # Same offset as collision detection
+        if (not self.paddle_rotation_active and  # Skip during final paddle rotation
+            self.ball_pos.y() + self.ball_radius >= paddle_y_position - self.paddle_hit_trigger_distance and 
             self.ball_pos.y() + self.ball_radius < paddle_y_position and 
             self.ball_velocity.y() > 0 and  # Ball is moving downward
             not self.paddle_hit_triggered and  # Haven't triggered yet for this bounce
-            not self.paddle_hit_active):  # Not already in hit animation
+            not self.paddle_hit_active and  # Not already in hit animation
+            self.bounce_count > 0):  # Only for subsequent bounces (not first drop)
             
             # Start paddle swing animation when ball is approaching
             self.start_paddle_hit_animation()
             self.paddle_hit_triggered = True  # Mark as triggered for this bounce
         
         # Check collision with paddle at fixed Y coordinate (simplified)
-        if self.ball_pos.y() + self.ball_radius >= 380:  # Adjust this value to match paddle position
+        # Use the paddle's actual current Y position for accurate collision detection
+        # The paddle sprite is 400x400 but the actual collision point is offset from the sprite position
+        paddle_collision_y = self.paddle_current_y + 190  # 190 is the offset from paddle sprite to actual collision point
+        
+        # Skip collision detection during final paddle rotation animation (paddle1-16.png sequence)
+        # This allows the ball to complete its journey to the center without interference
+        if not self.paddle_rotation_active and self.ball_pos.y() + self.ball_radius >= paddle_collision_y:
+            # Debug: Print collision information
+            print(f"Ball collision detected! Ball Y: {self.ball_pos.y()}, Paddle collision Y: {paddle_collision_y}, Bounce count: {self.bounce_count}")
+            
+            # Safety check: prevent infinite collision loop
+            if self.bounce_count >= 3:
+                print("Bounce count limit reached, preventing further collisions")
+                return
+            
             # Increment bounce count
             self.bounce_count += 1
             
@@ -206,22 +317,37 @@ class PowerPongTransitionAnimation(QWidget):
             if self.bounce_count >= 3:
                 # After third bounce, let ball complete its upward journey to center
                 # Calculate velocity to reach center of screen (Y=240)
-                height_to_center = 380 - 240  # Distance from paddle to center
+                height_to_center = paddle_collision_y - 240  # Distance from paddle to center
+                
+                # Safety check: prevent negative height values
+                if height_to_center <= 0:
+                    print(f"Warning: Invalid height_to_center for 3rd bounce: {height_to_center}, using fallback")
+                    height_to_center = 100  # Fallback height
+                    
                 required_velocity = math.sqrt(2 * self.gravity * height_to_center)
                 self.ball_velocity.setY(-required_velocity)
                 
                 # Start paddle rotation animation
                 self.start_paddle_rotation()
                 
-                # Don't set expanding flag yet - wait until ball reaches center
+                # Don't stop ball physics yet - let it reach the center first
+                # The physics will be stopped when the ball reaches center in the update loop
+                print("3rd bounce completed, ball heading to center")
+                
                 # Ensure ball doesn't get stuck below bounce point
-                self.ball_pos.setY(380 - self.ball_radius)
+                self.ball_pos.setY(paddle_collision_y - self.ball_radius)
                 return
             
             # Normal bounce - calculate velocity to reach center of screen (Y=240)
             # Use physics formula: v² = 2 * g * h, where h is height difference
             # IMPORTANT: Use consistent bounce height for ALL bounces (including first)
-            height_to_center = 380 - 240  # Distance from paddle to center = 140 pixels
+            height_to_center = paddle_collision_y - 240  # Distance from paddle to center
+            
+            # Safety check: prevent negative height values
+            if height_to_center <= 0:
+                print(f"Warning: Invalid height_to_center: {height_to_center}, using fallback")
+                height_to_center = 100  # Fallback height
+                
             required_velocity = math.sqrt(2 * self.gravity * height_to_center)
             
             # Normalize the bounce by setting a consistent velocity regardless of incoming speed
@@ -229,7 +355,7 @@ class PowerPongTransitionAnimation(QWidget):
             self.ball_velocity.setY(-required_velocity)
             
             # Ensure ball doesn't get stuck below bounce point
-            self.ball_pos.setY(380 - self.ball_radius)
+            self.ball_pos.setY(paddle_collision_y - self.ball_radius)
         
         # Check if ball has reached the center (peak of 3rd bounce) and should expand
         if self.bounce_count >= 3 and self.ball_pos.y() <= 240 and not self.expanding:
@@ -254,9 +380,17 @@ class PowerPongTransitionAnimation(QWidget):
         if self.ball_pos.y() + self.ball_radius >= 480:
             # Reset ball to top when it hits the floor
             self.ball_pos = QPointF(400, 50)
-            self.ball_velocity = QPointF(0, 3)
+            self.ball_velocity = QPointF(0, 0)  # Reset to no velocity for consistent first drop
+            self.bounce_count = 0  # Reset bounce count for new sequence
             # Reset trigger flag for new drop
             self.paddle_hit_triggered = False
+            
+            # Reset first swing system for new sequence
+            self.first_swing_completed = False
+            self.first_swing_active = False
+            self.first_swing_frame_count = 0
+            if self.first_swing_timer:
+                self.first_swing_timer.stop()
         
         # Move the actual ball widget to the new position
         self.ball_label.move(int(self.ball_pos.x() - self.ball_radius), int(self.ball_pos.y() - self.ball_radius))
@@ -466,6 +600,9 @@ class PowerPongTransitionAnimation(QWidget):
         
     def handle_expansion(self):
         """Handle the ball expansion animation to fill the entire page"""
+        # Ensure ball is positioned at center of screen
+        self.ball_pos = QPointF(400, 240)  # Center of 800x480 screen
+        
         # Get current ball size
         current_size = self.ball_label.width()
         
@@ -493,6 +630,7 @@ class PowerPongTransitionAnimation(QWidget):
         # Check if ball has expanded enough to cover the entire screen
         if new_size >= 1000:  # Large enough to cover 800x480 screen
             # Ball has filled the screen, complete the transition
+            print("Ball expansion complete, transitioning to next page")
             self.complete_transition()
         
     def complete_transition(self):

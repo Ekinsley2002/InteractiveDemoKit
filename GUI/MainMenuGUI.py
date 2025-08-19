@@ -89,6 +89,47 @@ class BlueCircleOverlay(QWidget):
         painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
 
 
+class WhiteCircleOverlay(QWidget):
+    """Separate overlay widget for the shrinking white circle animation when coming back from Power Pong"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)  # Pass through mouse events
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        
+        # Animation properties
+        self.circle_radius = 1000  # Start with full screen coverage
+        self.circle_center = QPointF(400, 240)  # Center of screen
+        self.visible = True
+        
+        # Set a solid background to ensure visibility
+        self.setStyleSheet("background-color: transparent;")  # Start transparent
+        
+    def update_circle(self, radius):
+        """Update the circle radius for animation"""
+        self.circle_radius = radius
+        self.update()
+        
+    def set_animation_state(self, active):
+        """Set whether the animation is active"""
+        self.visible = active
+        self.update()
+        
+    def paintEvent(self, event):
+        """Draw the shrinking white circle overlay"""
+        if not self.visible:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Draw white circle that covers the screen and shrinks
+        painter.setPen(Qt.PenStyle.NoPen)  # No outline
+        painter.setBrush(QColor(255, 255, 255))  # White fill
+        painter.drawEllipse(self.circle_center, self.circle_radius, self.circle_radius)
+
+
 class MenuPage(QWidget):
     def __init__(self, ser, main_window=None, parent=None):
         super().__init__(parent)
@@ -211,7 +252,7 @@ class MenuPage(QWidget):
         lay.addWidget(headline, alignment=Qt.AlignmentFlag.AlignHCenter)
 
 
-        lay.addSpacing(12)  # Reduced from 18 to save space
+        lay.addSpacing(8)  # Reduced further to fit 4 buttons
 
         # primary button → AFM page
         self.afm_btn = QPushButton("Atomic Force Microscope")
@@ -219,7 +260,7 @@ class MenuPage(QWidget):
         lay.addWidget(self.afm_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
         # Connection handled in main.py for transition animation
 
-        lay.addSpacing(10)  # Reduced from 12 to save space
+        lay.addSpacing(5)  # Reduced to fit 4 buttons in same space
 
         # secondary → Power Pong page
         self.pwrpng_btn = QPushButton("Power Pong!")
@@ -227,14 +268,21 @@ class MenuPage(QWidget):
         lay.addWidget(self.pwrpng_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
         # Connection handled in main.py for transition animation
         
-        lay.addSpacing(10)  # Reduced from 12 to save space
+        lay.addSpacing(5)  # Reduced to fit 4 buttons in same space
 
-        # tertiary -> Motor Fun page
-        self.mtrfun_btn = QPushButton("Control and Feedback Tuning")
-        self.mtrfun_btn.setObjectName("MtrFunBtn")
-        lay.addWidget(self.mtrfun_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        # tertiary -> Haptic Feedback page
+        self.haptic_btn = QPushButton("Haptic Feedback")
+        self.haptic_btn.setObjectName("HapticBtn")
+        lay.addWidget(self.haptic_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        lay.addSpacing(10)  # Reduced from 12 to save space 
+        lay.addSpacing(5)  # Reduced to fit 4 buttons in same space
+
+        # quaternary -> Spring Dampener Tuning Page
+        self.spgdmp_btn = QPushButton("Spring Dampener Tuning")
+        self.spgdmp_btn.setObjectName("SpgDmpBtn")
+        lay.addWidget(self.spgdmp_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        lay.addSpacing(8)  # Reduced final spacing 
 
         lay.addStretch()
         
@@ -249,6 +297,7 @@ class MenuPage(QWidget):
         # Don't create overlays automatically - they will be created by specific functions
         self.yellow_circle_overlay = None
         self.blue_circle_overlay = None
+        self.white_circle_overlay = None
     
     def update_gear_rotation(self):
         """Update the gear image with current rotation angle"""
@@ -297,6 +346,8 @@ class MenuPage(QWidget):
             self.yellow_circle_overlay.update_circle(new_radius)
         elif self.blue_circle_overlay is not None:
             self.blue_circle_overlay.update_circle(new_radius)
+        elif self.white_circle_overlay is not None:
+            self.white_circle_overlay.update_circle(new_radius)
         
         # Check if shrinking is complete
         if self.shrink_frame_count >= self.shrink_frames:
@@ -309,6 +360,9 @@ class MenuPage(QWidget):
             elif self.blue_circle_overlay is not None:
                 self.blue_circle_overlay.set_animation_state(False)
                 self.blue_circle_overlay = None
+            elif self.white_circle_overlay is not None:
+                self.white_circle_overlay.set_animation_state(False)
+                self.white_circle_overlay = None
     
     def start_yellow_circle_animation(self):
         """Start the yellow circle shrinking animation (called after startup animation)"""
@@ -343,6 +397,25 @@ class MenuPage(QWidget):
         # CRITICAL: Ensure overlay is on top of everything
         self.blue_circle_overlay.raise_()  # Raise to top
         self.blue_circle_overlay.show()    # Show the overlay
+        
+        # Reset animation state and start the shrinking animation
+        self.shrink_frame_count = 0
+        QTimer.singleShot(100, self.shrink_animation_timer.start)  # 0.1 second delay
+        
+    def start_white_circle_animation(self):
+        """Start the white circle shrinking animation (called when coming back from Power Pong)"""
+        # Create the white circle overlay
+        if self.main_window:
+            self.white_circle_overlay = WhiteCircleOverlay(self.main_window)
+        else:
+            self.white_circle_overlay = WhiteCircleOverlay(self)
+            
+        self.white_circle_overlay.setFixedSize(800, 480)
+        self.white_circle_overlay.move(0, 0)  # Position at top-left corner
+        
+        # CRITICAL: Ensure overlay is on top of everything
+        self.white_circle_overlay.raise_()  # Raise to top
+        self.white_circle_overlay.show()    # Show the overlay
         
         # Reset animation state and start the shrinking animation
         self.shrink_frame_count = 0
