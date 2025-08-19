@@ -68,8 +68,28 @@ void loop() {
 }
 
 void runSpringDampener() {
+  int code = 2;   // Self signal as default
+
   setupSpringDampener();
-  springDampenerLoop();
+
+  while( code != MAIN_MENU ) {
+
+    code = checkCode();
+
+    if (code >= 0) {              // only act if we *did* read something
+      switch (code) {
+        case MAIN_MENU:
+        case AFM:
+        case SPRING_DAMPENER:
+          return;                 // leave Golf mode
+        case POWER_PONG:
+          /* stay here */         // do nothing special
+          break;
+      }
+    }
+
+    springDampenerLoop();
+  }
 }
 
 int checkCode() {

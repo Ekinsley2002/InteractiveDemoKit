@@ -94,18 +94,7 @@ void setupSpringDampener() {
 
 
 void springDampenerLoop() {
-    int code = checkCode();       // –1 means “nothing new”
 
-    if (code >= 0) {              // only act if we *did* read something
-      switch (code) {
-        case MAIN_MENU:
-        case POWER_PONG:
-          return;                 // leave AFM mode
-        case AFM:
-          /* stay here */         // do nothing special
-          break;
-      }
-    }
   // Main FOC algorithm function that updates motor and sensor variables
       motor.loopFOC();
 

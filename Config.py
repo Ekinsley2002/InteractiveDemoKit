@@ -1,6 +1,6 @@
 # This is the configuration file to alter parameters of the program.
 
-BOARDLESS = True # Set to false if board is present
+BOARDLESS = False # Set to false if board is present
 
 DEVICE = "Windows" # Options: Mac, Linux, Windows
 

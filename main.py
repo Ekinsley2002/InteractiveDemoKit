@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
             self.setCursor(QCursor(Qt.CursorShape.BlankCursor))
 
         elif Config.DEVICE == "Windows":
-            self.PORT = "COM3"
+            self.PORT = "COM4"
 
         # Check to see if using board, if not, set up fake serial
         if Config.BOARDLESS:
