@@ -1,11 +1,29 @@
 # PowerPongTransitionAnimation.py
+# 
+# ADJUSTABLE PADDLE HITTING ANIMATION PARAMETERS:
+# - paddle_hit_drop_distance: How many pixels the paddle drops down (default: 25)
+# - paddle_hit_rotation_angle: How many degrees the paddle rotates down (default: 35)
+# - paddle_hit_animation_speed: Frames for the hit animation, lower = faster (default: 8)
+# - paddle_hit_return_speed: Frames for the return animation, lower = faster (default: 12)
+# - paddle_hit_trigger_distance: Distance above paddle where swing animation starts (default: 80)
+#
+# The paddle will perform a swing animation 4 times total:
+# 1. When the ball is approaching the paddle from the top (80 pixels above)
+# 2. When the ball is approaching after the 1st bounce
+# 3. When the ball is approaching after the 2nd bounce  
+# 4. When the ball is approaching after the 3rd bounce
+#
+# Each swing animation: paddle drops down + rotates clockwise (preparing for hit), 
+# then returns up + rotates counter-clockwise (recovery)
+#
+# The swing starts BEFORE the ball hits, making it look like the paddle is preparing for the shot
+#
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPointF
 from PyQt6.QtGui import QPainter, QColor, QPixmap, QTransform
 import os
 import math
 from pathlib import Path
-
 
 class PowerPongTransitionAnimation(QWidget):
     """Power Pong transition animation with centered paddle sprite and bouncing ball"""
@@ -28,7 +46,7 @@ class PowerPongTransitionAnimation(QWidget):
         self.ball_radius = 30
         self.ball_pos = QPointF(400, 50)  # Start at top center
         self.ball_velocity = QPointF(0, 3)  # Initial downward velocity
-        self.gravity = 0.2
+        self.gravity = 0.25
         self.bounce_count = 0  # Track number of bounces
         self.expanding = False  # Track if ball is expanding
         
@@ -49,6 +67,25 @@ class PowerPongTransitionAnimation(QWidget):
         # Simple movement system
         self.paddle_movement_step = 0  # Current movement step (0 to 15)
         
+        # ───────── ADJUSTABLE PADDLE HITTING ANIMATION PARAMETERS ─────────
+        self.paddle_hit_drop_distance = 50      # How many pixels the paddle drops down (increased for more dramatic swing)
+        self.paddle_hit_rotation_angle = 20     # How many degrees the paddle rotates down (increased for more dramatic swing)
+        self.paddle_hit_animation_speed = 13     # Frames for the hit animation (lower = faster)
+        self.paddle_hit_return_speed = 13       # Frames for the return animation (lower = faster)
+        self.paddle_hit_trigger_distance = 180   # Distance above paddle where animation starts (ball triggers swing when this close)
+        
+        # Paddle hitting animation state
+        self.paddle_hit_active = False
+        self.paddle_hit_phase = "none"  # "none", "dropping", "returning"
+        self.paddle_hit_frame_count = 0
+        self.paddle_hit_timer = None
+        self.paddle_hit_target_y = self.paddle_start_y
+        self.paddle_hit_target_rotation = 0
+        self.paddle_hit_start_y = self.paddle_start_y
+        self.paddle_hit_start_rotation = 0
+        self.paddle_hit_triggered = False  # Track if we've already triggered the hit for this bounce
+        self.paddle_pivot_x = 60
+        self.paddle_pivot_y = 340
         # Debug: print initial paddle position
         print(f"Initial paddle position: X = {self.paddle_start_x}")
         
@@ -62,6 +99,7 @@ class PowerPongTransitionAnimation(QWidget):
                 background-color: #FFFFFF;
             }
         """)
+        
         # Position the ball initially
         self.ball_label.move(int(self.ball_pos.x() - self.ball_radius), int(self.ball_pos.y() - self.ball_radius))
         # Ensure ball is on top of everything
@@ -144,10 +182,25 @@ class PowerPongTransitionAnimation(QWidget):
         self.ball_pos.setX(self.ball_pos.x() + self.ball_velocity.x())
         self.ball_pos.setY(self.ball_pos.y() + self.ball_velocity.y())
         
+        # Check if ball is approaching the paddle and trigger swing animation
+        paddle_y_position = 380  # Y position where ball hits paddle
+        if (self.ball_pos.y() + self.ball_radius >= paddle_y_position - self.paddle_hit_trigger_distance and 
+            self.ball_pos.y() + self.ball_radius < paddle_y_position and 
+            self.ball_velocity.y() > 0 and  # Ball is moving downward
+            not self.paddle_hit_triggered and  # Haven't triggered yet for this bounce
+            not self.paddle_hit_active):  # Not already in hit animation
+            
+            # Start paddle swing animation when ball is approaching
+            self.start_paddle_hit_animation()
+            self.paddle_hit_triggered = True  # Mark as triggered for this bounce
+        
         # Check collision with paddle at fixed Y coordinate (simplified)
         if self.ball_pos.y() + self.ball_radius >= 380:  # Adjust this value to match paddle position
             # Increment bounce count
             self.bounce_count += 1
+            
+            # Reset the trigger flag for the next bounce
+            self.paddle_hit_triggered = False
             
             # Check if this is the third bounce
             if self.bounce_count >= 3:
@@ -167,9 +220,14 @@ class PowerPongTransitionAnimation(QWidget):
             
             # Normal bounce - calculate velocity to reach center of screen (Y=240)
             # Use physics formula: v² = 2 * g * h, where h is height difference
-            height_to_center = 380 - 240  # Distance from paddle to center
+            # IMPORTANT: Use consistent bounce height for ALL bounces (including first)
+            height_to_center = 380 - 240  # Distance from paddle to center = 140 pixels
             required_velocity = math.sqrt(2 * self.gravity * height_to_center)
+            
+            # Normalize the bounce by setting a consistent velocity regardless of incoming speed
+            # This ensures all bounces (1st, 2nd, 3rd) reach exactly the same height
             self.ball_velocity.setY(-required_velocity)
+            
             # Ensure ball doesn't get stuck below bounce point
             self.ball_pos.setY(380 - self.ball_radius)
         
@@ -197,12 +255,23 @@ class PowerPongTransitionAnimation(QWidget):
             # Reset ball to top when it hits the floor
             self.ball_pos = QPointF(400, 50)
             self.ball_velocity = QPointF(0, 3)
+            # Reset trigger flag for new drop
+            self.paddle_hit_triggered = False
         
         # Move the actual ball widget to the new position
         self.ball_label.move(int(self.ball_pos.x() - self.ball_radius), int(self.ball_pos.y() - self.ball_radius))
         
     def start_paddle_rotation(self):
         """Start the paddle rotation animation sequence (frames 1-16)"""
+        # Stop any active paddle hit animation first
+        if self.paddle_hit_active and self.paddle_hit_timer:
+            self.paddle_hit_timer.stop()
+            self.paddle_hit_active = False
+            self.paddle_hit_phase = "none"
+        
+        # Reset paddle to original position and rotation
+        self.reset_paddle_to_original_state()
+        
         # Start paddle rotation animation
         self.paddle_rotation_active = True
         self.paddle_movement_step = 0 # Reset movement step for new animation
@@ -217,11 +286,107 @@ class PowerPongTransitionAnimation(QWidget):
         self.paddle_rotation_timer.timeout.connect(self.update_paddle_rotation)
         self.paddle_rotation_timer.setInterval(16)  # 60 FPS for fast rotation
         self.paddle_rotation_timer.start()
-        
-
-        
         # Load first rotation frame
         self.load_paddle_rotation_frame(1)
+        
+    def start_paddle_hit_animation(self):
+        """Start the paddle hitting animation (drop down + rotate, then return)"""
+        if self.paddle_hit_active:
+            return  # Don't start if already active
+            
+        self.paddle_hit_active = True
+        self.paddle_hit_phase = "dropping"
+        self.paddle_hit_frame_count = 0
+        
+        # Store starting position and rotation
+        self.paddle_hit_start_y = self.paddle_current_y
+        self.paddle_hit_start_rotation = 0  # Current rotation is 0
+        
+        # Set target position and rotation for the hit
+        self.paddle_hit_target_y = self.paddle_start_y + self.paddle_hit_drop_distance
+        self.paddle_hit_target_rotation = self.paddle_hit_rotation_angle
+        
+        # Set up hit animation timer
+        self.paddle_hit_timer = QTimer()
+        self.paddle_hit_timer.timeout.connect(self.update_paddle_hit_animation)
+        self.paddle_hit_timer.setInterval(16)  # 60 FPS for smooth animation
+        self.paddle_hit_timer.start()
+        
+    def update_paddle_hit_animation(self):
+        """Update the paddle hitting animation frame by frame"""
+        if not self.paddle_hit_active:
+            return
+            
+        self.paddle_hit_frame_count += 1
+        
+        if self.paddle_hit_phase == "dropping":
+            # Phase 1: Drop down and rotate clockwise
+            progress = min(self.paddle_hit_frame_count / self.paddle_hit_animation_speed, 1.0)
+            
+            # Interpolate position and rotation
+            current_y = self.paddle_hit_start_y + (self.paddle_hit_target_y - self.paddle_hit_start_y) * progress
+            current_rotation = self.paddle_hit_start_rotation + (self.paddle_hit_target_rotation - self.paddle_hit_start_rotation) * progress
+            
+            # Update paddle position and rotation
+            self.paddle_current_y = current_y
+            self.paddle_label.move(int(self.paddle_current_x), int(current_y))
+            
+            # Apply rotation to the current paddle image
+            self.apply_paddle_rotation(current_rotation)
+            
+            # Check if dropping phase is complete
+            if self.paddle_hit_frame_count >= self.paddle_hit_animation_speed:
+                # Switch to returning phase
+                self.paddle_hit_phase = "returning"
+                self.paddle_hit_frame_count = 0
+                
+                # Update start values for return animation
+                self.paddle_hit_start_y = self.paddle_current_y
+                self.paddle_hit_start_rotation = current_rotation
+                
+        elif self.paddle_hit_phase == "returning":
+            # Phase 2: Return up and rotate counter-clockwise back to original
+            progress = min(self.paddle_hit_frame_count / self.paddle_hit_return_speed, 1.0)
+            
+            # Interpolate position and rotation back to original
+            current_y = self.paddle_hit_start_y + (self.paddle_start_y - self.paddle_hit_start_y) * progress
+            current_rotation = self.paddle_hit_start_rotation + (0 - self.paddle_hit_start_rotation) * progress
+            
+            # Update paddle position and rotation
+            self.paddle_current_y = current_y
+            self.paddle_label.move(int(self.paddle_current_x), int(current_y))
+            
+            # Apply rotation to the current paddle image
+            self.apply_paddle_rotation(current_rotation)
+            
+            # Check if returning phase is complete
+            if self.paddle_hit_frame_count >= self.paddle_hit_return_speed:
+                # Animation complete, reset state
+                self.paddle_hit_active = False
+                self.paddle_hit_phase = "none"
+                self.paddle_hit_timer.stop()
+                
+                # Ensure paddle is back to original position and rotation
+                self.paddle_current_y = self.paddle_start_y
+                self.paddle_label.move(int(self.paddle_current_x), int(self.paddle_start_y))
+                self.apply_paddle_rotation(0)
+                
+    def apply_paddle_rotation(self, rotation_angle):
+        """Apply rotation to the current paddle image"""
+        # Load the current paddle image
+        sprite_path = os.path.join(os.path.dirname(__file__), "Sprites", "paddleSide.png")
+        if os.path.exists(sprite_path):
+            pixmap = QPixmap(sprite_path)
+            # Scale the pixmap to the specified size
+            scaled_pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            
+            # Apply the rotation
+            transform = QTransform()
+            transform.rotate(rotation_angle)  # Positive for clockwise
+            rotated_pixmap = scaled_pixmap.transformed(transform, Qt.TransformationMode.SmoothTransformation)
+            
+            # Update the paddle image
+            self.paddle_label.setPixmap(rotated_pixmap)
         
     def load_paddle_rotation_frame(self, frame_number):
         """Load and display a specific paddle rotation frame"""
@@ -346,4 +511,11 @@ class PowerPongTransitionAnimation(QWidget):
         
         # Draw the blue background manually as a fallback
         painter.fillRect(self.rect(), QColor(0, 36, 84))  # #002454
+
+    def reset_paddle_to_original_state(self):
+        """Reset the paddle to its original position and rotation"""
+        self.paddle_current_x = self.paddle_start_x
+        self.paddle_current_y = self.paddle_start_y
+        self.paddle_label.move(int(self.paddle_current_x), int(self.paddle_current_y))
+        self.apply_paddle_rotation(0)  # Reset rotation to 0 degrees
 
