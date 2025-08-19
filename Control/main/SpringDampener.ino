@@ -11,7 +11,7 @@ unsigned long previous_time = 0;
 
 // Toggle parameters
 bool toggle_state = false;
-float zero_position = 0.8;
+float zero_position = 4.38;
 float target_offset = 2.094; // 120 degrees in radians
 
 // Variables for performance metrics
@@ -39,7 +39,8 @@ void doToggleSetpoint(char* cmd) {
   max_position = 0;
   settled = false;
   rise_time_recorded = false;
-  Serial.println("time, position"); // CSV header for logging
+  Serial.println("DATA_START"); // Signal to Python that data collection is starting
+  Serial.println("time,position"); // CSV header for logging
 }
 
 
@@ -128,6 +129,10 @@ void springDampenerLoop() {
                   Serial.print((current_time - start_time) / 1000.0, 3); // Log time in seconds with 3 decimal places
                   Serial.print(",");
                   Serial.println(current_position_degrees, 3); // Log position in degrees with 3 decimal places
+                  
+                  // Save swing data to file for GUI graphing
+                  // Note: Arduino cannot directly write to files, so we'll send this data
+                  // to the Python GUI which will save it to swingData.txt
 
                   // Track maximum position for overshoot calculation
                   if (current_position > max_position) {
@@ -147,6 +152,7 @@ void springDampenerLoop() {
                       settle_start_time = current_time;
                     } else if (current_time - settle_start_time >= 10000) { // Settling time condition (1 second within threshold)
                       logging = false; // Stop logging
+                      Serial.println("DATA_END"); // Signal to Python that data collection is ending
                       float overshoot = ((max_position - target_position) / (target_position - zero_position)) * 100.0;
                       float settling_time = (current_time - start_time) / 10000.0;
                       Serial.print("Overshoot (%): ");

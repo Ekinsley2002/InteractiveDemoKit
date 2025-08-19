@@ -1,34 +1,5 @@
 # PowerPongTransitionAnimation.py
-# 
-# ADJUSTABLE PADDLE HITTING ANIMATION PARAMETERS:
-# - paddle_hit_drop_distance: How many pixels the paddle drops down (default: 25)
-# - paddle_hit_rotation_angle: How many degrees the paddle rotates down (default: 35)
-# - paddle_hit_animation_speed: Frames for the hit animation, lower = faster (default: 8)
-# - paddle_hit_return_speed: Frames for the return animation, lower = faster (default: 12)
-# - paddle_hit_trigger_distance: Distance above paddle where swing animation starts (ball triggers swing when this close)
-# - first_swing_delay_frames: Frames to wait before starting the first swing (timer-based control)
-#
-# HYBRID PADDLE HIT SYSTEM:
-# - First swing: Timer-based (precise control over initial drop swing)
-# - Second & Third swings: Distance-based (automatic when ball approaches paddle)
-# - Easy to adjust: change first_swing_delay_frames to control when first swing happens
-#
-# BALL PHYSICS: All bounces (1st, 2nd, 3rd) now reach exactly the same height (Y=240)
-# - First drop starts with no initial velocity for consistent physics
-# - Each bounce uses the same velocity calculation to reach center
-# - No frame skipping or jumping - smooth, consistent animation
-# - Final paddle rotation (paddle1-16.png) is completely protected from ball physics interference
-#
-# The paddle will perform a swing animation 4 times total:
-# 1. First swing: After first_swing_delay_frames (timer-controlled)
-# 2. When the ball is approaching after the 1st bounce (distance-based)
-# 3. When the ball is approaching after the 2nd bounce (distance-based)
-# 4. When the ball is approaching after the 3rd bounce (distance-based)
-#
-# Each swing animation: paddle drops down + rotates clockwise (preparing for hit), 
-# then returns up + rotates counter-clockwise (recovery)
-#
-# TIMING CONTROL: Adjust first_swing_delay_frames to control exactly when the first swing happens!
+
 #
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPointF
@@ -69,34 +40,61 @@ class PowerPongTransitionAnimation(QWidget):
         self.paddle_rotation_active = False
         
         # Paddle positioning properties
-        self.paddle_start_x = 140  # Starting X position (adjust this value)
-        self.paddle_start_y = 190   # Starting Y position (adjust this value)
-        self.paddle_move_left_per_frame = 1  # Pixels to move left per frame (adjust this value)
-        self.paddle_move_up_per_frame = 10    # Pixels to move up per frame (adjust this value)
-        self.paddle_current_x = self.paddle_start_x  # Current X position during animation
-        self.paddle_current_y = self.paddle_start_y  # Current Y position during animation
-        
-        # Simple movement system
-        self.paddle_movement_step = 0  # Current movement step (0 to 15)
+        # Starting X position
+        self.paddle_start_x = 140
+
+        # Starting Y position
+        self.paddle_start_y = 190
+
+        # Pixels to move left per frame
+        self.paddle_move_left_per_frame = 1
+
+        # Pixels to move up per frame
+        self.paddle_move_up_per_frame = 10
+
+        # Current X position during animation
+        self.paddle_current_x = self.paddle_start_x
+
+        # Current Y position during animation
+        self.paddle_current_y = self.paddle_start_y
+
+        self.paddle_movement_step = 0
         
         # ───────── ADJUSTABLE PADDLE HITTING ANIMATION PARAMETERS ─────────
-        self.paddle_hit_drop_distance = 40      # How many pixels the paddle drops down (increased for more dramatic swing)
-        self.paddle_hit_rotation_angle = 20     # How many degrees the paddle rotates down (increased for more dramatic swing)
-        self.paddle_hit_animation_speed = 14     # Frames for the hit animation (lower = faster)
-        self.paddle_hit_return_speed = 14       # Frames for the return animation (lower = faster)
-        self.paddle_hit_trigger_distance = 140   # Distance above paddle where animation starts (ball triggers swing when this close)
-        self.first_swing_delay_frames = 28    # Frames to wait before starting the first swing (timer-based control)
+        # How many pixels the paddle drops down (increased for more dramatic swing)
+        self.paddle_hit_drop_distance = 40
+
+        # How many degrees the paddle rotates down (increased for more dramatic swing)
+        self.paddle_hit_rotation_angle = 20
+
+        # Frames for the hit animation (lower = faster)
+        self.paddle_hit_animation_speed = 14
+
+        # Frames for the return animation (lower = faster)
+        self.paddle_hit_return_speed = 14
+
+        # Distance above paddle where animation starts (ball triggers swing when this close)
+        self.paddle_hit_trigger_distance = 140
+
+        # Frames to wait before starting the first swing (timer-based control)
+        self.first_swing_delay_frames = 28
         
         # Paddle hitting animation state
         self.paddle_hit_active = False
-        self.paddle_hit_phase = "none"  # "none", "dropping", "returning"
+
+        # Paddle hitting animation phase
+        self.paddle_hit_phase = "none"
+
+        # Paddle hitting animation frame count
         self.paddle_hit_frame_count = 0
         self.paddle_hit_timer = None
         self.paddle_hit_target_y = self.paddle_start_y
         self.paddle_hit_target_rotation = 0
         self.paddle_hit_start_y = self.paddle_start_y
         self.paddle_hit_start_rotation = 0
-        self.paddle_hit_triggered = False  # Track if we've already triggered the hit for this bounce
+
+        # Track if we've already triggered the hit for this bounce
+        self.paddle_hit_triggered = False
         
         # First swing timer system
         self.first_swing_timer = None
@@ -125,17 +123,15 @@ class PowerPongTransitionAnimation(QWidget):
         # Ensure ball is on top of everything
         self.ball_label.raise_()
         
-        # Create a completely free-floating paddle (no layout constraints)
         # Create label for the paddle sprite
-        self.paddle_label = QLabel(self)  # Direct parent to self, no layout
-        self.paddle_label.setFixedSize(400, 400)  # Fixed size to prevent layout interference
-        # No alignment - positioning is completely coordinate-based
+        self.paddle_label = QLabel(self)
+        self.paddle_label.setFixedSize(400, 400)
         
         # Load and display the paddleSide.png sprite
         sprite_path = os.path.join(os.path.dirname(__file__), "Sprites", "paddleSide.png")
         if os.path.exists(sprite_path):
             pixmap = QPixmap(sprite_path)
-            # Scale the pixmap to a reasonable size (adjust as needed)
+            # Scaler for paddle here
             scaled_pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             self.paddle_label.setPixmap(scaled_pixmap)
         else:
