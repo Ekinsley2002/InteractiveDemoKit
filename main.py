@@ -6,6 +6,13 @@ os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
 os.environ["QT_SCALE_FACTOR"]            = "1"
 os.environ["QT_ENABLE_HIGHDPI_SCALING"]  = "0"
 
+from pathlib import Path
+import os
+
+APP_DIR = Path(__file__).resolve().parent
+os.chdir(APP_DIR)  # make relative paths resolve from project root
+
+
 from PyQt6.QtCore import Qt, QCoreApplication, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt6.QtGui import QCursor
