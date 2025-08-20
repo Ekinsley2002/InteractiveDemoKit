@@ -11,7 +11,7 @@ unsigned long previous_time = 0;
 
 // Toggle parameters
 bool toggle_state = false;
-float zero_position = 4.38;
+float zero_position = 4.39;
 float target_offset = 2.094; // 120 degrees in radians
 
 // Variables for performance metrics

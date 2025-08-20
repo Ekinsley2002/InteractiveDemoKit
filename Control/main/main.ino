@@ -10,7 +10,8 @@ BLDCDriver3PWM    driver = BLDCDriver3PWM(6, 5, 3, 4);
 #define _DEG2RAD 0.01745329251994329577f
 #define _RAD2DEG 57.295779513082320876f
 
-const float ZERO_DEG = 250.0f;                  // mech. reference
+//const float ZERO_DEG = 254.00f;                  // mech. reference
+const float ZERO_DEG = 256.00f;
 const float ZERO_RAD = ZERO_DEG * _DEG2RAD;
 
 // Software smoother

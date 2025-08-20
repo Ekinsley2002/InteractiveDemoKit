@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt
 
 TRIAL_FILE = "trials.txt"
-MAX_VALUES_PER_TRIAL = 100
+MAX_VALUES_PER_TRIAL = 300
 MAX_TRIALS = 4
 
 

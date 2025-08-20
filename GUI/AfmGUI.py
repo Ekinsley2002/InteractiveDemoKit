@@ -92,6 +92,7 @@ class AfmPageWidget(QWidget):
 
     back_requested = pyqtSignal()
     map_requested = pyqtSignal()
+    references_requested = pyqtSignal()
 
     def __init__(self, ser, parent=None):
         super().__init__(parent)
@@ -104,7 +105,7 @@ class AfmPageWidget(QWidget):
         with open("Styles/styleAfmPage.qss", "r") as f:
             self.setStyleSheet(f.read())
 
-        self.INIT_Y_MINMAX = (0, 0.5)
+        self.INIT_Y_MINMAX = (0, 1.5)
         self.AUTO_TRIP_DEG = 2.0
         self.SETTLE_DEG = 0.5
         self.SETTLE_SECS = 10.0
@@ -116,7 +117,7 @@ class AfmPageWidget(QWidget):
 
         self.MAX_TRIALS = 4
         self.RECORD_DURATION = 10
-        self.MAX_VALUES_PER_TRIAL = 100
+        self.MAX_VALUES_PER_TRIAL = 300
         self.TRIAL_FILE = "trials.txt"
 
         # GUI setup
@@ -214,6 +215,7 @@ class AfmPageWidget(QWidget):
         self.map_button.clicked.connect(self.on_map_button)
         self.clear_trial_file_button.clicked.connect(self.clear_trial_file)
         self.back_button.clicked.connect(self.go_back)
+        self.show_references_button.clicked.connect(self.on_references_button)
 
         # Timer setup
         self.timer = QtCore.QTimer()
@@ -388,6 +390,10 @@ class AfmPageWidget(QWidget):
     def on_map_button(self):
         """User pressed 'Map' → tell MainWindow to flip pages."""
         self.map_requested.emit()
+
+    def on_references_button(self):
+        """User pressed 'Show References' → tell MainWindow to show reference page."""
+        self.references_requested.emit()
 
     def showEvent(self, event):
         self._resume_if_needed()

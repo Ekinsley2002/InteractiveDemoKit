@@ -16,6 +16,7 @@ from GUI.TopographyGUI import TopographyPageWidget
 from GUI.PowerPongGUI  import PowerPongPageWidget
 from GUI.HapticFeedbackGUI import HapticFeedbackPageWidget
 from GUI.SpringDampenerGUI    import SpringDampenerPageWidget
+from GUI.referencePageGUI import ReferencePageWidget
 from Animation.StartupAnimation import StartupAnimation
 from Animation.GraphingLineAnimation import GraphingLineAnimation
 from Animation.PowerPongTransitionAnimation import PowerPongTransitionAnimation
@@ -71,6 +72,7 @@ class MainWindow(QMainWindow):
         self.menu_page = None
         self.afm_page = None
         self.topo_page = None
+        self.reference_page = None
         self.power_pong_page = None
         self.haptic_feedback_page = None
         self.spring_dampener_page = None
@@ -115,12 +117,22 @@ class MainWindow(QMainWindow):
             lambda: self.stack.setCurrentWidget(self.afm_page)
         )
 
-        # page 3 → Power-Pong
+        # page 3 → Reference Page
+        self.reference_page = ReferencePageWidget()
+        self.stack.addWidget(self.reference_page)
+        self.afm_page.references_requested.connect(
+            lambda: self.stack.setCurrentWidget(self.reference_page)
+        )
+        self.reference_page.back_requested.connect(
+            lambda: self.stack.setCurrentWidget(self.afm_page)
+        )
+
+        # page 4 → Power-Pong
         self.power_pong_page = PowerPongPageWidget(self.ser)
         self.stack.addWidget(self.power_pong_page)
         self.power_pong_page.back_requested.connect(self.complete_power_pong_back_transition)
 
-        # page 4 → Haptic Feedback
+        # page 5 → Haptic Feedback
         self.haptic_feedback_page = HapticFeedbackPageWidget()
         self.stack.addWidget(self.haptic_feedback_page)
         self.menu_page.haptic_btn.clicked.connect(
@@ -130,7 +142,7 @@ class MainWindow(QMainWindow):
             lambda: self.stack.setCurrentWidget(self.menu_page)
         )
 
-        # page 5 → Spring Dampener Tuning Page
+        # page 6 → Spring Dampener Tuning Page
         self.spring_dampener_page = SpringDampenerPageWidget(self.ser)
         self.stack.addWidget(self.spring_dampener_page)
         self.menu_page.spgdmp_btn.clicked.connect(self.show_spring_dampener)
@@ -208,6 +220,10 @@ class MainWindow(QMainWindow):
 
     def complete_power_pong_back_transition(self):
         """Called when coming back from Power Pong page to main menu"""
+        # Send MAIN_MENU command to Arduino to reset it from Power Pong mode
+        self.ser.write(b"\x00")
+        self.ser.flush()
+        
         # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
         

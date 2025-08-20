@@ -75,9 +75,9 @@ void powerPongLoop() {
   if (code >= 0) {
     switch (code) {
       case MAIN_MENU:
-      case POWER_PONG:
-        return;
       case AFM:
+        return;
+      case POWER_PONG:
         break;
     }
   }
