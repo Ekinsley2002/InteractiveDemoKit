@@ -2,32 +2,59 @@ QWidget#AfmPage {
     background: #002454
 }
 
-/* ∎ Base style for ALL buttons on the AFM page - matching main menu */
-QWidget#AfmPage QPushButton {
+QWidget#ButtonSection {
+    background: #002454;
+}
+
+QWidget#LeftButtonContainer {
+    background: transparent;
+}
+
+QWidget#RightButtonContainer {
+    background: transparent;
+}
+
+/* Base style for left side buttons */
+QWidget#AfmPage QPushButton#left_button {
     color: #FFFFFF;
     font: 600 22px "Roboto";
-    padding: 6px 20px;
     background: rgba(255,255,255,0.05);
     border: 2px solid #FAC01A;
     border-radius: 12px;
-    min-width: 700px;
-    max-width: 780px;
+    min-width: 400px;
+    max-width: 400px;
+    min-height: 35px;
+    max-height: 35px;
     text-align: center;
 }
 
-/* ∎ Hover state */
+/* Base style for right side buttons */
+QWidget#AfmPage QPushButton#right_button {
+    color: #FFFFFF;
+    font: 600 26px "Roboto";
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #FAC01A;
+    border-radius: 12px;
+    min-width: 350px;
+    max-width: 350px;
+    min-height: 60px;
+    max-height: 60px;
+    text-align: center;
+}
+
+/* Hover state for all buttons */
 QWidget#AfmPage QPushButton:hover {
     background: rgba(255,255,255,0.10);
     border-color: #FAC01A;
 }
 
-/* ∎ Pressed state */
+/* Pressed state for all buttons */
 QWidget#AfmPage QPushButton:pressed {
     background: rgba(255,255,255,0.14);
     border-color: #FAC01A;
 }
 
-/* ∎ Special styling for the back button */
+/* Special styling for the back button */
 QWidget#AfmPage QPushButton#back_button {
     background: #002454;
     border: 2px solid #002454;

@@ -105,7 +105,7 @@ class AfmPageWidget(QWidget):
         with open("Styles/styleAfmPage.qss", "r") as f:
             self.setStyleSheet(f.read())
 
-        self.INIT_Y_MINMAX = (0, 1.5)
+        self.INIT_Y_MINMAX = (0, 2)
         self.AUTO_TRIP_DEG = 2.0
         self.SETTLE_DEG = 0.5
         self.SETTLE_SECS = 10.0
@@ -127,6 +127,7 @@ class AfmPageWidget(QWidget):
         #    *and* the Back button.
         graph_holder = QtWidgets.QWidget(self)
         graph_holder.setObjectName("GraphHolder")
+        graph_holder.setFixedHeight(310)  # Exactly 2/3 of 480px screen height
 
         # zero-margin layout so the plot fills the whole thing
         gh_layout = QVBoxLayout(graph_holder)
@@ -158,7 +159,7 @@ class AfmPageWidget(QWidget):
         self.back_button.setObjectName("back_button")   # Set object name for CSS styling
         self.back_button.setFixedSize(70, 28)          # optional – keeps it tidy
         self.back_button.move(675, 10)                  # 10 px from top-left
-        self.back_button.raise_()                      # make sure it’s on top
+        self.back_button.raise_()                      # make sure it's on top
         self.back_button.clicked.connect(self.go_back)
 
         # 3) Create floating trial info container positioned under the back button
@@ -184,21 +185,54 @@ class AfmPageWidget(QWidget):
         trial_container.move(628, 60)  # Same X as back button, below it
         trial_container.raise_()        # Ensure it's on top of the graph
 
-        # 4) The rest of the controls stay in the main vertical layout
+        # 4) Create the button section container below the graph
+        button_section = QtWidgets.QWidget(self)
+        button_section.setObjectName("ButtonSection")
+        button_section.setFixedHeight(154)  # Exactly 1/3 of 480px screen height
+        layout.addWidget(button_section)
+
+        # Create horizontal layout for the button section
+        button_layout = QtWidgets.QHBoxLayout(button_section)
+        button_layout.setContentsMargins(0, 10, 0, 0)  # Remove side and bottom margins, keep top only
+        button_layout.setSpacing(20)  # Add spacing between left and right containers
+
+        # Left side container with 3 buttons in a row
+        left_button_container = QtWidgets.QWidget()
+        left_button_container.setObjectName("LeftButtonContainer")
+        left_layout = QtWidgets.QVBoxLayout(left_button_container)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(10)
+
         self.record_button = QPushButton("Record")
-        layout.addWidget(self.record_button)
+        self.record_button.setObjectName("left_button")
+        left_layout.addWidget(self.record_button)
 
         self.map_button = QPushButton("Map")
-        layout.addWidget(self.map_button)
+        self.map_button.setObjectName("left_button")
+        left_layout.addWidget(self.map_button)
 
         self.clear_trial_file_button = QPushButton("Clear Trials")
-        layout.addWidget(self.clear_trial_file_button)
+        self.clear_trial_file_button.setObjectName("left_button")
+        left_layout.addWidget(self.clear_trial_file_button)
 
-        self.show_references_button = QPushButton("Show References")
-        layout.addWidget(self.show_references_button)
+        # Right side container with 2 larger buttons
+        right_button_container = QtWidgets.QWidget()
+        right_button_container.setObjectName("RightButtonContainer")
+        right_layout = QtWidgets.QVBoxLayout(right_button_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(10)
+
+        self.show_references_button = QPushButton("Reference Samples")
+        self.show_references_button.setObjectName("right_button")
+        right_layout.addWidget(self.show_references_button)
 
         self.guess_samples_button = QPushButton("Guess Samples")
-        layout.addWidget(self.guess_samples_button)
+        self.guess_samples_button.setObjectName("right_button")
+        right_layout.addWidget(self.guess_samples_button)
+
+        # Add both containers to the button section with proper sizing
+        button_layout.addWidget(left_button_container, 1)  # Equal stretch
+        button_layout.addWidget(right_button_container, 1)  # Equal stretch
 
         # State variables
         self.data_t, self.data_deg = [], []
