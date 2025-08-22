@@ -20,14 +20,16 @@ QLabel#IntroLabel {
 QWidget#CentralArea QPushButton {
     color:#FFFFFF;
     font:600 20px "Roboto";  /* Reduced font size further to fit 4 buttons */
-    padding:2px 20px;         /* Reduced top/bottom padding significantly */
+    padding:2px 10px;         /* Reduced top/bottom padding significantly */
     background:rgba(255,255,255,0.05);
     border:2px solid #FAC01A;
     border-radius:12px;
 
     /* ★ guarantee plenty of room for long labels                */
-    min-width: 700px;     /* Increased to fit "Control and Feedback Tuning" */
-    max-width: 780px;     /* Ensure buttons don't exceed window width */
+    min-width: 350px;     /* Reduced to fit 2 buttons per row */
+    max-width: 380px;     /* Ensure buttons don't exceed row width */
+    min-height: 85px;
+    max-height: 85px;
     text-align: center;   /* Center text within buttons */
 }
 

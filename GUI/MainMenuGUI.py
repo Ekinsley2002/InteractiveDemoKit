@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 from PyQt6.QtCore    import Qt, QTimer, QPointF
 from PyQt6.QtGui     import QPixmap, QTransform, QPainter, QColor
 import Config
@@ -142,7 +142,7 @@ class MenuPage(QWidget):
             self.setStyleSheet(f.read())
 
         lay = QVBoxLayout(self)
-        lay.setSpacing(16)  # Reduced from 20 to save space
+        lay.setSpacing(12)  # Reduced from 20 to save space
         lay.setContentsMargins(0, 0, 0, 0)  # Remove margins to prevent white areas
         
         # Logo setup
@@ -252,36 +252,55 @@ class MenuPage(QWidget):
 
         lay.addSpacing(8)  # Reduced further to fit 4 buttons
 
+        # Create a container for the 2x2 button grid
+        button_grid_container = QWidget()
+        button_grid_layout = QVBoxLayout(button_grid_container)
+        button_grid_layout.setSpacing(10)  # Reduced spacing between rows
+        button_grid_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # First row of buttons (AFM and Power Pong)
+        first_row = QWidget()
+        first_row_layout = QHBoxLayout(first_row)
+        first_row_layout.setSpacing(20)  # Spacing between buttons in the same row
+        first_row_layout.setContentsMargins(0, 0, 0, 0)
+        
         # primary button → AFM page
         self.afm_btn = QPushButton("Atomic Force Microscope")
         self.afm_btn.setObjectName("AfmBtn")
-        lay.addWidget(self.afm_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-        # Connection handled in main.py for transition animation
-
-        lay.addSpacing(5)  # Reduced to fit 4 buttons in same space
-
+        first_row_layout.addWidget(self.afm_btn)
+        
         # secondary → Power Pong page
         self.pwrpng_btn = QPushButton("Power Pong!")
         self.pwrpng_btn.setObjectName("PwrPngBtn")
-        lay.addWidget(self.pwrpng_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-        # Connection handled in main.py for transition animation
+        first_row_layout.addWidget(self.pwrpng_btn)
         
-        lay.addSpacing(5)  # Reduced to fit 4 buttons in same space
-
+        # Add first row to button grid
+        button_grid_layout.addWidget(first_row)
+        
+        # Second row of buttons (Haptic Feedback and Spring Dampener)
+        second_row = QWidget()
+        second_row_layout = QHBoxLayout(second_row)
+        second_row_layout.setSpacing(20)  # Spacing between buttons in the same row
+        second_row_layout.setContentsMargins(0, 0, 0, 0)
+        
         # tertiary -> Haptic Feedback page
         self.haptic_btn = QPushButton("Haptic Feedback")
         self.haptic_btn.setObjectName("HapticBtn")
-        lay.addWidget(self.haptic_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
-
-        lay.addSpacing(5)  # Reduced to fit 4 buttons in same space
-
+        second_row_layout.addWidget(self.haptic_btn)
+        
         # quaternary -> Spring Dampener Tuning Page
         self.spgdmp_btn = QPushButton("Spring Dampener Tuning")
         self.spgdmp_btn.setObjectName("SpgDmpBtn")
-        lay.addWidget(self.spgdmp_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        second_row_layout.addWidget(self.spgdmp_btn)
+        
+        # Add second row to button grid
+        button_grid_layout.addWidget(second_row)
+        
+        # Add the button grid container to the main layout
+        lay.addWidget(button_grid_container, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        lay.addSpacing(8)  # Reduced final spacing 
-
+        lay.addSpacing(8)  # Reduced final spacing
+        
         lay.addStretch()
         
         # Circle overlay animation setup
