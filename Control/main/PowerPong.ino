@@ -9,6 +9,7 @@ Commander command = Commander(Serial);
 void doTarget(char* cmd) { command.scalar(&target_velocity, cmd); }
 void doMove270(char* cmd);
 void doResetZero(char* cmd);
+void doOffset(char* cmd);
 
 void setupPowerPong() {
   // Set D7 as ground for SimpleFOC V1.0 mini board
@@ -64,6 +65,7 @@ void setupPowerPong() {
   command.add('T', doTarget, "target velocity");
   command.add('M', doMove270, "move 270 degrees and back");
   command.add('R', doResetZero, "reset zero point");
+  command.add('O', doOffset, "set offset");
 
   _delay(1000);
 }
@@ -150,4 +152,38 @@ void doResetZero(char* cmd) {
 
   // Stop the motor
   motor.move(0);
+}
+
+void doOffset(char* cmd) {
+  // Directly convert the command to a float offset
+  float offset = atof(cmd);
+
+  // Print the offset for debugging
+  Serial.print("Moving to Offset: ");
+  Serial.println(offset, 4);
+
+  // Calculate the new zero point by adding the offset to the current zero point
+  float new_zero = zero_point + offset;
+
+  // Move to the new zero point
+  float current_angle = sensor.getAngle();
+  float angle_difference = new_zero - current_angle;
+  
+  if (angle_difference > 0) {
+    while (current_angle < new_zero) {
+      motor.move(4);
+      motor.loopFOC();
+      current_angle = sensor.getAngle();
+    }
+  } else {
+    while (current_angle > new_zero) {
+      motor.move(-4);
+      motor.loopFOC();
+      current_angle = sensor.getAngle();
+    }
+  }
+
+  // Stop the motor
+  motor.move(0);
+  
 }
