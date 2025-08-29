@@ -1,46 +1,61 @@
 /* Haptic Feedback Page Stylesheet */
 
 QWidget#HapticFeedbackPage {
-    background-color: #002454;
-    color: #FFFFFF;
+    background: #002454
 }
 
 QLabel#Title {
-    font: 600 32px 'Roboto';
     color: #FAC01A;
+    font: 600 32px "Roboto";
     margin: 20px 0px;
 }
 
-QLabel#ContentLabel {
-    font: 400 16px 'Roboto';
-    color: #CEF9F2;
-    margin: 40px 20px;
-    padding: 20px;
-    border: 2px solid #FAC01A;
-    border-radius: 12px;
-    background-color: rgba(0, 52, 132, 0.3);
+QLabel#PickerTitle {
+    color: #FFFFFF;
+    font: 600 18px "Roboto";
 }
 
-QPushButton {
-    font: 600 18px 'Roboto';
+QLabel#ValueDisplay {
+    color: #FAC01A;
+    font: 600 24px "Roboto";
+    background: rgba(255,255,255,0.10);
+    border: 2px solid #FAC01A;
+    border-radius: 8px;
+}
+
+QPushButton#ArrowBtn {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #FAC01A;
+    border-radius: 8px;
+}
+
+QPushButton#ArrowBtn:hover {
+    background: rgba(255,255,255,0.10);
+}
+
+QPushButton#AddBtn {
     color: #FFFFFF;
-    background-color: #003366;
+    font: 600 16px "Roboto";
+    background: rgba(255,255,255,0.05);
+    border: 2px solid #FAC01A;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+
+QPushButton#AddBtn:hover {
+    background: rgba(255,255,255,0.10);
+}
+
+QPushButton#BackBtn {
+    color: #FFFFFF;
+    font: 600 18px "Roboto";
+    background: rgba(255,255,255,0.05);
     border: 2px solid #FAC01A;
     border-radius: 8px;
     padding: 12px 24px;
     min-width: 200px;
 }
 
-QPushButton:hover {
-    background-color: #004477;
-    border: 2px solid #FFCC33;
-}
-
-QPushButton:pressed {
-    background-color: #002255;
-    border: 2px solid #FAC01A;
-}
-
-QPushButton#BackBtn {
-    margin: 20px 0px;
+QPushButton#BackBtn:hover {
+    background: rgba(255,255,255,0.10);
 }

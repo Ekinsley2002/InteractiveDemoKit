@@ -140,14 +140,10 @@ class MainWindow(QMainWindow):
         self.power_pong_page.back_requested.connect(self.complete_power_pong_back_transition)
 
         # page 5 → Haptic Feedback
-        self.haptic_feedback_page = HapticFeedbackPageWidget()
+        self.haptic_feedback_page = HapticFeedbackPageWidget(self.ser)
         self.stack.addWidget(self.haptic_feedback_page)
-        self.menu_page.haptic_btn.clicked.connect(
-            lambda: self.stack.setCurrentWidget(self.haptic_feedback_page)
-        )
-        self.haptic_feedback_page.back_requested.connect(
-            lambda: self.stack.setCurrentWidget(self.menu_page)
-        )
+        self.menu_page.haptic_btn.clicked.connect(self.show_haptic_feedback)
+        self.haptic_feedback_page.back_requested.connect(self.haptic_feedback_back)
 
         # page 6 → Spring Dampener Tuning Page
         self.spring_dampener_page = SpringDampenerPageWidget(self.ser)
@@ -236,6 +232,26 @@ class MainWindow(QMainWindow):
         
         # Start the white circle shrinking animation (coming back from Power Pong)
         self.menu_page.start_white_circle_animation()
+
+    def show_haptic_feedback(self):
+        """Send Haptic Feedback command to Arduino and switch to Haptic Feedback page"""
+        
+        # Send Haptic Feedback command to Arduino (3 = Haptic Feedback mode)
+        self.ser.write(b"\x03")
+        self.ser.flush()
+        
+        # Switch directly to Haptic Feedback page (no transition animation)
+        self.stack.setCurrentWidget(self.haptic_feedback_page)
+
+    def haptic_feedback_back(self):
+        """Send stop command to Arduino and return to main menu from Haptic Feedback page"""
+        
+        # Send stop command to Arduino (0 = stop/idle mode)
+        self.ser.write(b"\x00")
+        self.ser.flush()
+        
+        # Switch back to main menu
+        self.stack.setCurrentWidget(self.menu_page)
 
     def show_spring_dampener(self):
         """Send Spring Dampener command to Arduino and switch to Spring Dampener page"""

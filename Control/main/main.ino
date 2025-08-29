@@ -23,6 +23,7 @@ static float angleFilt = ZERO_RAD;
 #define MAIN_MENU 0
 #define AFM 1
 #define POWER_PONG 2
+#define HAPTIC_FEEDBACK 3
 #define SPRING_DAMPENER 4
 
 /**
@@ -65,8 +66,39 @@ void loop() {
       runSpringDampener();
       afm_initialised = false;
       return;
+
+    case HAPTIC_FEEDBACK:
+      runHapticFeedback();
+      afm_initialised = false;
+      return;
   }
 }
+
+void runHapticFeedback() {
+  int code = 2;   // Self signal as default
+
+  setupHapticFeedback();
+
+  while( code != MAIN_MENU ) {
+
+    code = checkCode();
+
+    if (code >= 0) {              // only act if we *did* read something
+      switch (code) {
+        case MAIN_MENU:
+        case AFM:
+        case SPRING_DAMPENER:
+          return;                 // leave Golf mode
+        case POWER_PONG:
+          /* stay here */         // do nothing special
+          break;
+      }
+    }
+
+    hapticFeedbackLoop();
+  }
+}
+
 
 void runSpringDampener() {
   int code = 2;   // Self signal as default
@@ -102,6 +134,7 @@ int checkCode() {
     case MAIN_MENU:  return MAIN_MENU;
     case AFM:        return AFM;
     case POWER_PONG: return POWER_PONG;
+    case HAPTIC_FEEDBACK: return HAPTIC_FEEDBACK;
     case SPRING_DAMPENER: return SPRING_DAMPENER;
     default:         return -1;             // unknown code
   }
@@ -178,27 +211,22 @@ void runAFM() {
 }
 
 void runPowerPong() {
-
-  int code = 2;   // Self signal as default
-
   setupPowerPong();
 
-  while( code != MAIN_MENU ) {
-
-    code = checkCode();
-
-    if (code >= 0) {              // only act if we *did* read something
+  while (true) {  // Run Power Pong loop until told to stop
+    int code = checkCode();
+    
+    if (code >= 0) {
       switch (code) {
         case MAIN_MENU:
         case AFM:
         case SPRING_DAMPENER:
-          return;                 // leave Golf mode
+          return;  // Exit back to main loop
         case POWER_PONG:
-          /* stay here */         // do nothing special
-          break;
+          break;   // Stay in Power Pong mode
       }
     }
-
-    powerPongLoop();
+    
+    powerPongLoop();  // Run one iteration of Power Pong logic
   }
 }

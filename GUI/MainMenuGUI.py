@@ -244,13 +244,13 @@ class MenuPage(QWidget):
             self.escape_button.clicked.connect(self.quit_app)
         
         # Headline
-        headline = QLabel("Welcome to the Interactive Demo Kit!")
+        headline = QLabel("Welcome to Metrology, Motors, and More!")
         headline.setObjectName("IntroLabel")
         headline.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         lay.addWidget(headline, alignment=Qt.AlignmentFlag.AlignHCenter)
 
 
-        lay.addSpacing(8)  # Reduced further to fit 4 buttons
+        lay.addSpacing(4)  # Reduced further to fit 4 buttons
 
         # Create a container for the 2x2 button grid
         button_grid_container = QWidget()
@@ -261,7 +261,7 @@ class MenuPage(QWidget):
         # First row of buttons (AFM and Power Pong)
         first_row = QWidget()
         first_row_layout = QHBoxLayout(first_row)
-        first_row_layout.setSpacing(20)  # Spacing between buttons in the same row
+        first_row_layout.setSpacing(10)  # Spacing between buttons in the same row
         first_row_layout.setContentsMargins(0, 0, 0, 0)
         
         # primary button → AFM page
@@ -280,7 +280,7 @@ class MenuPage(QWidget):
         # Second row of buttons (Haptic Feedback and Spring Dampener)
         second_row = QWidget()
         second_row_layout = QHBoxLayout(second_row)
-        second_row_layout.setSpacing(20)  # Spacing between buttons in the same row
+        second_row_layout.setSpacing(10)  # Spacing between buttons in the same row
         second_row_layout.setContentsMargins(0, 0, 0, 0)
         
         # tertiary -> Haptic Feedback page

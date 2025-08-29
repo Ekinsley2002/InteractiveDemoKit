@@ -71,18 +71,7 @@ void setupPowerPong() {
 }
 
 void powerPongLoop() {
-  
-  int code = checkCode();       // –1 means “nothing new”
 
-  if (code >= 0) {
-    switch (code) {
-      case MAIN_MENU:
-      case AFM:
-        return;
-      case POWER_PONG:
-        break;
-    }
-  }
   // Main FOC algorithm function
   motor.loopFOC();
 
@@ -92,6 +81,7 @@ void powerPongLoop() {
   // User communication
   command.run();
 }
+
 
 void doMove270(char* cmd) {
   // Save the current position as the initial zero point

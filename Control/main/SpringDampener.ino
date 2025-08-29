@@ -1,7 +1,6 @@
 #include <SimpleFOC.h>
 
 // Spring-dampener tuning parameters
-float spring_constant = 13; // Proportional gain
 float damping_constant = 3; // Derivative gain
 
 
