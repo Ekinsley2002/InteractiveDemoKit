@@ -4,82 +4,75 @@
 float target_velocity = 2;
 float zero_point = 0;
 
-// instantiate the commander
-Commander command = Commander(Serial);
-void doTarget(char* cmd) { command.scalar(&target_velocity, cmd); }
+// Exit flag for PowerPong loop
+bool powerPongExitFlag = false;
+
+// Use global navigation commander (declared in main.ino)
+void doTarget(char* cmd) { navigationCommander.scalar(&target_velocity, cmd); }
 void doMove270(char* cmd);
 void doResetZero(char* cmd);
 void doOffset(char* cmd);
+void goBack();
+
+
 
 void setupPowerPong() {
-  // Set D7 as ground for SimpleFOC V1.0 mini board
-  int pin = 7;
-  pinMode(pin, OUTPUT);
-  digitalWrite(pin, LOW);
-
-  // Initialize the onboard LED pin as an output
+  powerPongExitFlag = false;
+  pinMode(7, OUTPUT);
+  digitalWrite(7, LOW);
+  disableMotor();
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
-
-  // Initialize magnetic sensor hardware
   sensor.init();
-  
-  // Link the motor to the sensor
   motor.linkSensor(&sensor);
-
-  // Driver configuration
   driver.voltage_power_supply = 12;
   driver.init();
-  
-  // Link the motor and the driver
   motor.linkDriver(&driver);
-
-  // Set motion control loop
   motor.controller = MotionControlType::velocity;
-
-  // Velocity PI controller parameters
   motor.PID_velocity.P = 0.25f;
   motor.PID_velocity.I = 2;
   motor.PID_velocity.D = 0;
-  
-  // Voltage limit
   motor.voltage_limit = 12;
-  
-  // Jerk control using voltage ramp
   motor.PID_velocity.output_ramp = 10000;
-
-  // Velocity low pass filtering
   motor.LPF_velocity.Tf = 0.01f;
-
-  // Use monitoring with serial
-  Serial.begin(115200);
   motor.useMonitoring(Serial);
-
-  // Initialize motor
   motor.init();
-  
-  // Align sensor and start FOC
   motor.initFOC();
-
-  // Add commands
-  command.add('T', doTarget, "target velocity");
-  command.add('M', doMove270, "move 270 degrees and back");
-  command.add('R', doResetZero, "reset zero point");
-  command.add('O', doOffset, "set offset");
-
+  motor.enable();
+  motor.target = 0;
+  motor.voltage.q = 0;
+  motor.voltage.d = 0;
+  delay(500);
+  setMotorReady();
   _delay(1000);
 }
 
-void powerPongLoop() {
+void goBack() {
+  digitalWrite(ledPin, HIGH);
+  powerPongExitFlag = true;
+}
 
-  // Main FOC algorithm function
+void cleanupPowerPong() {
+  if (motor.driver != nullptr) {
+    motor.move(0);
+    motor.disable();
+    delay(300);
+    motor.target = 0;
+    motor.voltage.q = 0;
+    motor.voltage.d = 0;
+    motor.PID_velocity.reset();
+    delay(100);
+  }
+}
+
+bool powerPongLoop() {
+  if (powerPongExitFlag) {
+    return false;
+  }
   motor.loopFOC();
-
-  // Motion control function
   motor.move(0);
-
-  // User communication
-  command.run();
+  navigationCommander.run();
+  return true;
 }
 
 
@@ -101,7 +94,7 @@ void doMove270(char* cmd) {
   
   // Stop the motor
   motor.move(0);
-  delay(500000);
+  delay(500);
   
   Serial.println("FORE!");
   

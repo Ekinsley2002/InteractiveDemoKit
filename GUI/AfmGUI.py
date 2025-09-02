@@ -399,7 +399,7 @@ class AfmPageWidget(QWidget):
         if not self.timer.isActive():
             self.ser.reset_input_buffer()    # drop whatever accumulated
             self._full_reset()               # fresh graph
-            self.ser.write(b"\x01")          # AFM = 1  ➜ start stream
+            self.ser.write(b"A")          # AFM = 1  ➜ start stream
             self.ser.flush()
             self.timer.start(self.TIMER_MS)
 
@@ -462,7 +462,7 @@ class AfmPageWidget(QWidget):
         """User hit Back -> start blue transition animation, then switch to menu."""
         # Stop the data stream and reset
         self.timer.stop()
-        self.ser.write(b"\x00")          # MAIN_MENU  = 0  ➜ pause Arduino
+        self.ser.write(b"M")          # MAIN_MENU  = 0  ➜ pause Arduino
         self.ser.flush()
         self._full_reset()
         

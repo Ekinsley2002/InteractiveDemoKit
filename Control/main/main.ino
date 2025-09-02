@@ -6,6 +6,9 @@ MagneticSensorSPI sensor = MagneticSensorSPI(AS5048_SPI, 10);
 BLDCMotor         motor  = BLDCMotor(11);
 BLDCDriver3PWM    driver = BLDCDriver3PWM(6, 5, 3, 4);
 
+// Global navigation commander
+Commander navigationCommander = Commander(Serial);
+
 // Angle helpers
 #define _DEG2RAD 0.01745329251994329577f
 #define _RAD2DEG 57.295779513082320876f
@@ -19,12 +22,249 @@ const float  ALPHA = 0.15f;
 static float angleFilt = ZERO_RAD;
 
 
-// Event constants
-#define MAIN_MENU 0
-#define AFM 1
-#define POWER_PONG 2
-#define HAPTIC_FEEDBACK 3
-#define SPRING_DAMPENER 4
+// Navigation state
+enum NavigationState {
+  MAIN_MENU,
+  AFM_MODE,
+  POWER_PONG_MODE,
+  HAPTIC_FEEDBACK_MODE,
+  SPRING_DAMPENER_MODE
+};
+
+NavigationState currentMode = MAIN_MENU;
+int ledPin = 9;
+
+// Motor overload detection variables
+unsigned long lastTransitionTime = 0;
+const unsigned long MIN_TRANSITION_INTERVAL = 2000;
+int consecutiveFailures = 0;
+const int MAX_CONSECUTIVE_FAILURES = 3;
+
+// Motor ready state verification
+bool motorReady = true;
+unsigned long motorReadyTime = 0;
+const unsigned long MOTOR_STABILIZATION_TIME = 500;
+
+// EMERGENCY FAILSAFE SYSTEM
+bool emergencyStop = false;
+
+// Navigation command functions will be defined after canTransition()
+
+// PowerPong command functions (declarations)
+void doTarget(char* cmd);
+void doOffset(char* cmd);
+void doResetZero(char* cmd);
+void doMove270(char* cmd);
+void goBack();
+void cleanupPowerPong();
+
+// SpringDampener command functions (declarations)
+void doSpringConstant(char* cmd);
+void doDampingConstant(char* cmd);
+void doToggleSetpoint(char* cmd);
+
+// Cleanup functions
+void cleanupHapticFeedback();
+void cleanupSpringDampener();
+
+// Motor control functions
+void disableMotor();
+bool checkMotorOverload();
+void handleTransitionOverload();
+bool canTransition();
+void setMotorNotReady();
+void setMotorReady();
+bool isMotorReady();
+void forceMainMenuReset();
+
+// EMERGENCY FAILSAFE FUNCTIONS
+void emergencyMotorStop();
+bool checkEmergencyConditions();
+
+// Forward declarations for navigation functions
+void goToAFM(char* cmd);
+void goToPowerPong(char* cmd);
+void goToHapticFeedback(char* cmd);
+void goToSpringDampener(char* cmd);
+void goToMainMenu(char* cmd);
+
+// Motor control functions
+void disableMotor() {
+  if (motor.driver != nullptr) {
+    motor.move(0);
+    motor.disable();
+    delay(300);
+    motor.target = 0;
+    motor.voltage.q = 0;
+    motor.voltage.d = 0;
+    motor.PID_velocity.reset();
+    motor.P_angle.reset();
+    motor.controller = MotionControlType::torque;
+    delay(100);
+  }
+  setMotorNotReady();
+}
+
+void setMotorNotReady() {
+  motorReady = false;
+  motorReadyTime = 0;
+}
+
+void setMotorReady() {
+  motorReady = true;
+  motorReadyTime = millis();
+}
+
+bool isMotorReady() {
+  if (!motorReady) return false;
+  return (millis() - motorReadyTime) >= MOTOR_STABILIZATION_TIME;
+}
+
+void forceMainMenuReset() {
+  if (motor.driver != nullptr) {
+    motor.move(0);
+    motor.disable();
+    driver.disable();
+    delay(500);
+    motor.linkSensor(nullptr);
+    motor.linkDriver(nullptr);
+    motor.target = 0;
+    motor.voltage.q = 0;
+    motor.voltage.d = 0;
+    motor.PID_velocity.reset();
+    motor.P_angle.reset();
+    motor.controller = MotionControlType::torque;
+    setMotorNotReady();
+    delay(1000);
+    motor.linkSensor(&sensor);
+    motor.linkDriver(&driver);
+    setMotorReady();
+  }
+}
+
+// EMERGENCY FAILSAFE FUNCTIONS
+void emergencyMotorStop() {
+  if (motor.driver != nullptr) {
+    motor.move(0);
+    motor.disable();
+    driver.disable();
+    motor.target = 0;
+    motor.voltage.q = 0;
+    motor.voltage.d = 0;
+  }
+  emergencyStop = true;
+}
+
+bool checkEmergencyConditions() {
+  if (motor.driver != nullptr) {
+    if (abs(motor.voltage.q) > motor.voltage_limit * 0.95) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool checkMotorOverload() {
+  // Simple overload check - just voltage limit
+  if (motor.driver != nullptr) {
+    if (abs(motor.voltage.q) > motor.voltage_limit * 0.9) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void handleTransitionOverload() {
+  consecutiveFailures++;
+  if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+    delay(5000);
+    consecutiveFailures = 0;
+  } else {
+    delay(1000 * consecutiveFailures);
+  }
+}
+
+bool canTransition() {
+  unsigned long now = millis();
+  if (now - lastTransitionTime < MIN_TRANSITION_INTERVAL) {
+    delay(MIN_TRANSITION_INTERVAL - (now - lastTransitionTime));
+  }
+  if (checkMotorOverload()) {
+    handleTransitionOverload();
+    return false;
+  }
+  // Only block if motor is completely not ready (not just not stabilized)
+  if (!motorReady) {
+    return false;
+  }
+  // Extra safety: if coming from main menu, ensure reset is complete
+  if (currentMode == MAIN_MENU) {
+    if (now - lastTransitionTime < 2000) {  // Wait 2 seconds after main menu reset
+      return false;
+    }
+  }
+  return true;
+}
+
+// Navigation command functions
+void goToAFM(char* cmd) { 
+  if (canTransition()) {
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    digitalWrite(ledPin, LOW);
+    currentMode = AFM_MODE;
+    lastTransitionTime = millis();
+    consecutiveFailures = 0; // Reset on successful transition
+  }
+}
+
+void goToPowerPong(char* cmd) { 
+  if (canTransition()) {
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    digitalWrite(ledPin, LOW);
+    currentMode = POWER_PONG_MODE;
+    lastTransitionTime = millis();
+    consecutiveFailures = 0;
+  }
+}
+
+void goToHapticFeedback(char* cmd) { 
+  if (canTransition()) {
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    digitalWrite(ledPin, LOW);
+    currentMode = HAPTIC_FEEDBACK_MODE;
+    lastTransitionTime = millis();
+    consecutiveFailures = 0;
+  }
+}
+
+void goToSpringDampener(char* cmd) { 
+  if (canTransition()) {
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    digitalWrite(ledPin, LOW);
+    currentMode = SPRING_DAMPENER_MODE;
+    lastTransitionTime = millis();
+    consecutiveFailures = 0;
+  }
+}
+
+void goToMainMenu(char* cmd) { 
+  if (canTransition()) {
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    digitalWrite(ledPin, LOW);
+    
+    // Force complete motor reset when going to main menu
+    forceMainMenuReset();
+    
+    currentMode = MAIN_MENU;
+    lastTransitionTime = millis();
+    consecutiveFailures = 0;
+  }
+}
 
 /**
  * Random 0.00 – 0.10 to Serial
@@ -38,36 +278,70 @@ void setup() {
   // Use an unconnected analog pin to add a little entropy.
   // If all your pins are in use, set a fixed seed instead (e.g., randomSeed(42)).
   randomSeed(analogRead(A0));
+  pinMode(ledPin, OUTPUT); 
+  digitalWrite(ledPin, LOW);
+  
+  // Initialize global commander with all commands
+  navigationCommander.add('A', goToAFM, "go to AFM mode");
+  navigationCommander.add('P', goToPowerPong, "go to Power Pong mode");
+  navigationCommander.add('H', goToHapticFeedback, "go to Haptic Feedback mode");
+  navigationCommander.add('S', goToSpringDampener, "go to Spring Dampener mode");
+  navigationCommander.add('M', goToMainMenu, "go to main menu");
+  
+  // Add PowerPong commands
+  navigationCommander.add('T', doTarget, "target velocity");
+  navigationCommander.add('O', doOffset, "set offset");
+  navigationCommander.add('R', doResetZero, "reset zero point");
+  navigationCommander.add('G', doMove270, "move 270 degrees and back");
+  navigationCommander.add('E', goBack, "go back to main menu");
+  
+  // Add SpringDampener commands
+  navigationCommander.add('K', doSpringConstant, "spring constant");
+  navigationCommander.add('D', doDampingConstant, "damping constant");
+  navigationCommander.add('Q', doToggleSetpoint, "toggle setpoint");
+  
+  Serial.println("Interactive Kits V5 - Ready");
+  setMotorReady();
 }
 
 void loop() {
-  static bool afm_initialised = false;     // remembers we did it once
+  static bool afm_initialised = false;
+  
+  // EMERGENCY FAILSAFE CHECK
+  if (checkEmergencyConditions()) {
+    emergencyMotorStop();
+    currentMode = MAIN_MENU;
+    setMotorNotReady();
+  }
 
-  int code = checkCode();
-  if (code < 0) return;
-
-  switch (code) {
+  switch (currentMode) {
     case MAIN_MENU:
-      afm_initialised = false;             // reset flags when you leave
+      afm_initialised = false;
+      while (currentMode == MAIN_MENU) {
+        navigationCommander.run();
+        delay(10);
+      }
       return;
 
-    case AFM:
-      if (!afm_initialised) {              // <--------------
+    case AFM_MODE:
+      if (!afm_initialised) {
         setupAFM();
         afm_initialised = true;
       }
       runAFM();
       return;
 
-    case POWER_PONG:
+    case POWER_PONG_MODE:
       afm_initialised = false;
       runPowerPong();
-    case SPRING_DAMPENER:
+      return;
+
+    case SPRING_DAMPENER_MODE:
       runSpringDampener();
       afm_initialised = false;
       return;
 
-    case HAPTIC_FEEDBACK:
+    case HAPTIC_FEEDBACK_MODE:
       runHapticFeedback();
       afm_initialised = false;
       return;
@@ -75,158 +349,76 @@ void loop() {
 }
 
 void runHapticFeedback() {
-  int code = 2;   // Self signal as default
-
   setupHapticFeedback();
-
-  while( code != MAIN_MENU ) {
-
-    code = checkCode();
-
-    if (code >= 0) {              // only act if we *did* read something
-      switch (code) {
-        case MAIN_MENU:
-        case AFM:
-        case SPRING_DAMPENER:
-          return;                 // leave Golf mode
-        case POWER_PONG:
-          /* stay here */         // do nothing special
-          break;
-      }
-    }
-
+  while(currentMode == HAPTIC_FEEDBACK_MODE) {
+    navigationCommander.run();
     hapticFeedbackLoop();
   }
+  cleanupHapticFeedback();
 }
 
 
 void runSpringDampener() {
-  int code = 2;   // Self signal as default
-
   setupSpringDampener();
-
-  while( code != MAIN_MENU ) {
-
-    code = checkCode();
-
-    if (code >= 0) {              // only act if we *did* read something
-      switch (code) {
-        case MAIN_MENU:
-        case AFM:
-        case SPRING_DAMPENER:
-          return;                 // leave Golf mode
-        case POWER_PONG:
-          /* stay here */         // do nothing special
-          break;
-      }
-    }
-
+  while(currentMode == SPRING_DAMPENER_MODE) {
+    navigationCommander.run();
     springDampenerLoop();
   }
+  cleanupSpringDampener();
 }
 
-int checkCode() {
-  if (Serial.available() == 0) return -1;   // no new byte
 
-  int byteRead = Serial.read();             // 0–255
-
-  switch (byteRead) {
-    case MAIN_MENU:  return MAIN_MENU;
-    case AFM:        return AFM;
-    case POWER_PONG: return POWER_PONG;
-    case HAPTIC_FEEDBACK: return HAPTIC_FEEDBACK;
-    case SPRING_DAMPENER: return SPRING_DAMPENER;
-    default:         return -1;             // unknown code
-  }
-}
 
 void setupAFM() {
-  pinMode(7, OUTPUT);           digitalWrite(7, LOW);
+  pinMode(7, OUTPUT); digitalWrite(7, LOW);
   pinMode(LED_BUILTIN, OUTPUT); digitalWrite(LED_BUILTIN, HIGH);
-
-  Serial.begin(115200);
-
+  disableMotor();
   sensor.init();
-
   driver.voltage_power_supply = 12;
   driver.init();
-
   motor.linkSensor(&sensor);
   motor.linkDriver(&driver);
-
-  motor.controller           = MotionControlType::angle;
-  motor.P_angle.P            = 30.0f;
-  motor.PID_velocity.P       = 0.25f;
-  motor.PID_velocity.I       = 2.0f;
-  motor.voltage_limit        = 6.0f;
-  motor.LPF_velocity.Tf      = 0.01f;
-
-  motor.voltage_sensor_align = 2;     // alignment kick
+  motor.controller = MotionControlType::angle;
+  motor.P_angle.P = 30.0f;
+  motor.PID_velocity.P = 0.25f;
+  motor.PID_velocity.I = 2.0f;
+  motor.voltage_limit = 6.0f;
+  motor.LPF_velocity.Tf = 0.01f;
+  motor.voltage_sensor_align = 2;
   motor.init();
   motor.initFOC();
-
-  motor.target = ZERO_RAD;            // park at mech zero
+  motor.enable();
+  motor.target = ZERO_RAD;
+  delay(500);
+  setMotorReady();
 }
 
 void runAFM() {
-
-  while (true) {                   // stay here until we’re told to leave
-    int code = checkCode();       // –1 means “nothing new”
-
-    if (code >= 0) {              // only act if we *did* read something
-      switch (code) {
-        case MAIN_MENU:
-        case POWER_PONG:
-        case SPRING_DAMPENER:
-          return;                 // leave AFM mode
-        case AFM:
-          /* stay here */         // do nothing special
-          break;
-        
-      }
+  while (currentMode == AFM_MODE) {
+    navigationCommander.run();
+    motor.loopFOC();
+    motor.move(ZERO_RAD);
+    static uint32_t t0 = 0;
+    if (millis() - t0 >= 10) {
+      t0 = millis();
+      float rawRad = sensor.getAngle();
+      angleFilt = (1.0f - ALPHA) * angleFilt + ALPHA * rawRad;
+      float deltaRad = fmodf((ZERO_RAD - angleFilt) + _2PI, _2PI);
+      float deltaDeg = deltaRad * _RAD2DEG;
+      if (deltaDeg > 100.0f) deltaDeg = 0.0f;
+      Serial.println(deltaDeg, 3);
     }
-
-  motor.loopFOC();
-  motor.move(ZERO_RAD);
-
-  static uint32_t t0 = 0;
-  if (millis() - t0 >= 10) {
-    t0 = millis();
-
-    /* 1. filter the raw angle */
-    float rawRad = sensor.getAngle();
-    angleFilt = (1.0f - ALPHA) * angleFilt + ALPHA * rawRad;
-
-    /* 2. offset in *your* positive direction          ↓ FLIPPED SIGN */
-    float deltaRad = fmodf((ZERO_RAD - angleFilt) + _2PI, _2PI); // 0 … 2π
-
-    /* 3. squash wrap bucket and negatives to zero */
-    float deltaDeg = deltaRad * _RAD2DEG;          // 0 … 360
-    if (deltaDeg > 100.0f)   deltaDeg = 0.0f;      // noise around wrap
-    /* if you also want any “wrong-way” motion to read 0: */
-    /* if (deltaDeg < 0.05f)   deltaDeg = 0.0f; */
-    Serial.println(deltaDeg, 3);
-  }
   }
 }
 
 void runPowerPong() {
   setupPowerPong();
-
-  while (true) {  // Run Power Pong loop until told to stop
-    int code = checkCode();
-    
-    if (code >= 0) {
-      switch (code) {
-        case MAIN_MENU:
-        case AFM:
-        case SPRING_DAMPENER:
-          return;  // Exit back to main loop
-        case POWER_PONG:
-          break;   // Stay in Power Pong mode
-      }
+  while (currentMode == POWER_PONG_MODE) {
+    navigationCommander.run();
+    if (!powerPongLoop()) {
+      cleanupPowerPong();
+      return;
     }
-    
-    powerPongLoop();  // Run one iteration of Power Pong logic
   }
+  cleanupPowerPong();
 }

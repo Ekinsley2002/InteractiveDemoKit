@@ -256,7 +256,7 @@ class PowerPongPageWidget(QWidget):
         self._write(f"O{value}\n")
 
     def _send_fore(self):
-        self._write("M\n")
+        self._write("G\n")
 
     def _send_zero_position(self):
         # Send command in SimpleFOC Commander format: "R {offset}"
@@ -327,6 +327,7 @@ class PowerPongPageWidget(QWidget):
                 
     def go_back(self):
         """User hit Back -> start white transition animation, then switch to menu."""
+        self.ser.write(b"E")
         # Clean up shrinking animation state
         if self.circle_overlay is not None:
             self.shrink_animation_timer.stop()

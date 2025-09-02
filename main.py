@@ -154,8 +154,8 @@ class MainWindow(QMainWindow):
     def show_afm_transition(self):
         """Show AFM transition animation before switching to AFM page"""
         
-        # Send AFM command to Arduino immediately (1 = AFM mode)
-        self.ser.write(b"\x01")
+        # Send AFM command to Arduino immediately (A = AFM mode)
+        self.ser.write(b"A\n")
         self.ser.flush()
         
         # Create graphing line animation
@@ -184,6 +184,10 @@ class MainWindow(QMainWindow):
         
     def complete_afm_back_transition(self):
         """Called when coming back from AFM page to main menu"""
+        # Send MAIN_MENU command to Arduino to reset it from AFM mode
+        self.ser.write(b"M\n")
+        self.ser.flush()
+        
         # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
         
@@ -193,8 +197,8 @@ class MainWindow(QMainWindow):
     def show_power_pong_transition(self):
         """Show Power Pong transition animation before switching to Power Pong page"""
         
-        # Send Power Pong command to Arduino immediately (2 = Power Pong mode)
-        self.ser.write(b"\x02")
+        # Send Power Pong command to Arduino immediately (P = Power Pong mode)
+        self.ser.write(b"P\n")
         self.ser.flush()
         
         # Create Power Pong transition animation
@@ -212,7 +216,6 @@ class MainWindow(QMainWindow):
         
     def complete_power_pong_transition(self):
         """Called when Power Pong transition animation completes"""
-        
         # Hide the transition animation
         if hasattr(self, 'power_pong_transition'):
             self.power_pong_transition.hide()
@@ -224,7 +227,7 @@ class MainWindow(QMainWindow):
     def complete_power_pong_back_transition(self):
         """Called when coming back from Power Pong page to main menu"""
         # Send MAIN_MENU command to Arduino to reset it from Power Pong mode
-        self.ser.write(b"\x00")
+        self.ser.write(b"M\n")
         self.ser.flush()
         
         # Switch to main menu page
@@ -236,8 +239,8 @@ class MainWindow(QMainWindow):
     def show_haptic_feedback(self):
         """Send Haptic Feedback command to Arduino and switch to Haptic Feedback page"""
         
-        # Send Haptic Feedback command to Arduino (3 = Haptic Feedback mode)
-        self.ser.write(b"\x03")
+        # Send Haptic Feedback command to Arduino (H = Haptic Feedback mode)
+        self.ser.write(b"H\n")
         self.ser.flush()
         
         # Switch directly to Haptic Feedback page (no transition animation)
@@ -246,8 +249,8 @@ class MainWindow(QMainWindow):
     def haptic_feedback_back(self):
         """Send stop command to Arduino and return to main menu from Haptic Feedback page"""
         
-        # Send stop command to Arduino (0 = stop/idle mode)
-        self.ser.write(b"\x00")
+        # Send stop command to Arduino (M = main menu mode)
+        self.ser.write(b"M\n")
         self.ser.flush()
         
         # Switch back to main menu
@@ -256,8 +259,8 @@ class MainWindow(QMainWindow):
     def show_spring_dampener(self):
         """Send Spring Dampener command to Arduino and switch to Spring Dampener page"""
         
-        # Send Spring Dampener command to Arduino (4 = Spring Dampener mode)
-        self.ser.write(b"\x04")
+        # Send Spring Dampener command to Arduino (S = Spring Dampener mode)
+        self.ser.write(b"S\n")
         self.ser.flush()
         
         # Switch directly to Spring Dampener page (no transition animation)
@@ -266,8 +269,8 @@ class MainWindow(QMainWindow):
     def spring_dampener_back(self):
         """Send stop command to Arduino and return to main menu from Spring Dampener page"""
         
-        # Send stop command to Arduino (0 = stop/idle mode)
-        self.ser.write(b"\x00")
+        # Send stop command to Arduino (M = main menu mode)
+        self.ser.write(b"M\n")
         self.ser.flush()
         
         # Switch back to main menu

@@ -1,7 +1,16 @@
 #include <SimpleFOC.h>
 
+// Forward declaration
+void disableMotor();
+void setMotorReady();
+void cleanupSpringDampener();
+void resetSpringDampenerState();
+
 // Spring-dampener tuning parameters
-float damping_constant = 3; // Derivative gain
+float spring_dampener_constant = 13.0; // Proportional gain
+float damping_constant = 3.0; // Derivative gain
+
+// Use global navigation commander (declared in main.ino)
 
 
 // Damping derivative calculation variables
@@ -10,7 +19,7 @@ unsigned long previous_time = 0;
 
 // Toggle parameters
 bool toggle_state = false;
-float zero_position = 4.39;
+float zero_position = 0.8;
 float target_offset = 2.094; // 120 degrees in radians
 
 // Variables for performance metrics
@@ -25,10 +34,10 @@ const float fixed_settle_threshold = 0.02 * 2.094; // 5% of the total step chang
 unsigned long last_log_time = 0; // Logging time tracker
 
 // Command to change spring constant
-void doSpringConstant(char* cmd) { command.scalar(&spring_constant, cmd); }
+void doSpringConstant(char* cmd) { navigationCommander.scalar(&spring_dampener_constant, cmd); }
 
 // Command to change damping constant constant
-void doDampingConstant(char* cmd) { command.scalar(&damping_constant, cmd); }
+void doDampingConstant(char* cmd) { navigationCommander.scalar(&damping_constant, cmd); }
 
 // Command to toggle setpoint and record response
 void doToggleSetpoint(char* cmd) {
@@ -44,52 +53,29 @@ void doToggleSetpoint(char* cmd) {
 
 
 void setupSpringDampener() {
-  // Set D7 as to low as a ground for the SimpleFOC V1.0 mini board
-  int pin = 7;  
-  pinMode(pin, OUTPUT);  // Set the pin as an output
-  digitalWrite(pin, LOW);  // Set the pin to LOW as ground
-
-  // Initialize magnetic sensor hardware
+  pinMode(7, OUTPUT);
+  digitalWrite(7, LOW);
+  disableMotor();
   sensor.init();
-  
-  // Link the motor to the sensor
-  motor.linkSensor(&sensor);
-
-  // Power supply voltage
   driver.voltage_power_supply = 12;
   driver.voltage_limit = 6;
   motor.voltage_limit = 6;
   driver.init();
+  motor.linkSensor(&sensor);
   motor.linkDriver(&driver);
-
-  // Aligning voltage 
   motor.voltage_sensor_align = 2;
-
-  // Choose FOC modulation
   motor.foc_modulation = FOCModulationType::SpaceVectorPWM;
-
-  // Set motion control loop to be used
   motor.controller = MotionControlType::torque;
-
-  // Use monitoring with serial 
-  Serial.begin(115200);
-
-  // Initialize motor
   motor.init();
-
-  // Align sensor and start FOC
   motor.initFOC();
-
-  // Add commands to adjust parameters
-  command.add('K', doSpringConstant, "spring constant");
-  command.add('D', doDampingConstant, "damping constant");
-  command.add('T', doToggleSetpoint, "toggle setpoint");
-
-  // Print startup instructions
+  motor.enable();
+  motor.target = 0;
+  motor.voltage.q = 0;
+  motor.voltage.d = 0;
+  delay(500);
+  setMotorReady();
+  resetSpringDampenerState();
   Serial.println(F("Motor ready."));
-  Serial.println(F("Set the tuning parameters using serial terminal, Prompt with 'K' and 'D'."));
-  Serial.println(F("Toggle setpoint using 'T' command."));
-  _delay(2000);
 }
 
 
@@ -97,19 +83,23 @@ void springDampenerLoop() {
 
   // Main FOC algorithm function
   motor.loopFOC();
-
   // Get the current position and velocity and time measurements
       float current_position = motor.shaftAngle(); // returns position in radians
       float current_position_degrees = current_position * (180.0 / PI); // convert position to degrees for logging
       unsigned long current_time = millis(); // Time in milliseconds
-      float velocity = (current_position - previous_position) / ((current_time - previous_time) / 1000.0); // rad/s
+      
+      // Calculate velocity with safety check to prevent division by zero
+      float velocity = 0.0;
+      if (current_time != previous_time) {
+        velocity = (current_position - previous_position) / ((current_time - previous_time) / 1000.0); // rad/s
+      }
 
   // Determine the target position based on the toggle state
       float target_position = toggle_state ? zero_position + target_offset : zero_position;
       float target_position_90 = target_position * 0.9; // defines 90% of the target position (rise time computation)
 
   // Calculate the spring force (proportional) and damping force (derivative), and total motor command
-      float spring_voltage = spring_constant * (target_position - current_position);
+      float spring_voltage = spring_dampener_constant * (target_position - current_position);
       float damping_voltage = -damping_constant * velocity;
 
   // Sum forces to get the motor command voltage
@@ -123,7 +113,7 @@ void springDampenerLoop() {
       previous_time = current_time;
 
   // This code is what logs the data at 100 Hz and characterizes the response
-                if (logging && millis() - last_log_time >= 100) { // 100 Hz logging
+                if (logging && millis() - last_log_time >= 100 && start_time > 0) { // 100 Hz logging with safety check
                   last_log_time = millis();
                   Serial.print((current_time - start_time) / 1000.0, 3); // Log time in seconds with 3 decimal places
                   Serial.print(",");
@@ -151,21 +141,40 @@ void springDampenerLoop() {
                       settle_start_time = current_time;
                     } else if (current_time - settle_start_time >= 10000) { // Settling time condition (1 second within threshold)
                       logging = false; // Stop logging
-                      Serial.println("DATA_END"); // Signal to Python that data collection is ending
-                      float overshoot = ((max_position - target_position) / (target_position - zero_position)) * 100.0;
-                      float settling_time = (current_time - start_time) / 10000.0;
-                      Serial.print("Overshoot (%): ");
-                      Serial.println(overshoot, 2);
-                      Serial.print("Rise Time (s): ");
-                      Serial.println(rise_time / 10000.0, 3); // Convert rise time to seconds
-                      Serial.print("Settling Time (s): ");
-                      Serial.println(settling_time, 3);
+                      Serial.println("DATA_END");
                     }
                   } else {
                     settled = false; // Reset settling check if out of threshold
                   }
                 }
 
-  // User communication - updates commands from the serial monitor
-  command.run();
+  navigationCommander.run();
+}
+
+void cleanupSpringDampener() {
+  if (motor.driver != nullptr) {
+    motor.move(0);
+    motor.disable();
+    delay(300);
+    motor.target = 0;
+    motor.voltage.q = 0;
+    motor.voltage.d = 0;
+    motor.PID_velocity.reset();
+    delay(100);
+  }
+  resetSpringDampenerState();
+}
+
+void resetSpringDampenerState() {
+  toggle_state = false;
+  logging = false;
+  start_time = 0;
+  max_position = 0;
+  settled = false;
+  settle_start_time = 0;
+  rise_time_recorded = false;
+  rise_time = 0;
+  last_log_time = 0;
+  previous_position = 0;
+  previous_time = 0;
 }

@@ -238,7 +238,7 @@ class SpringDampenerPageWidget(QWidget):
         self._write(f"D{value}\n")
 
     def _send_test_parameters(self):
-        self._write("T\n")
+        self._write("Q\n")
         # Start collecting swing data
         self._start_data_collection()
         
