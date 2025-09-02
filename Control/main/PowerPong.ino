@@ -14,8 +14,6 @@ void doResetZero(char* cmd);
 void doOffset(char* cmd);
 void goBack();
 
-
-
 void setupPowerPong() {
   powerPongExitFlag = false;
   pinMode(7, OUTPUT);
@@ -44,6 +42,7 @@ void setupPowerPong() {
   motor.voltage.d = 0;
   delay(500);
   setMotorReady();
+  doResetZero('R0'); // 
   _delay(1000);
 }
 
@@ -94,7 +93,7 @@ void doMove270(char* cmd) {
   
   // Stop the motor
   motor.move(0);
-  delay(500);
+  delay(2000);
   
   Serial.println("FORE!");
   

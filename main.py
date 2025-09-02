@@ -27,6 +27,8 @@ from GUI.referencePageGUI import ReferencePageWidget
 from Animation.StartupAnimation import StartupAnimation
 from Animation.GraphingLineAnimation import GraphingLineAnimation
 from Animation.PowerPongTransitionAnimation import PowerPongTransitionAnimation
+from Animation.SpringDampenerAnimation import SpringDampenerAnimation
+from Animation.HapticFeedbackAnimation import HapticFeedbackAnimation
 
 
 class MainWindow(QMainWindow):
@@ -142,13 +144,13 @@ class MainWindow(QMainWindow):
         # page 5 → Haptic Feedback
         self.haptic_feedback_page = HapticFeedbackPageWidget(self.ser)
         self.stack.addWidget(self.haptic_feedback_page)
-        self.menu_page.haptic_btn.clicked.connect(self.show_haptic_feedback)
+        self.menu_page.haptic_btn.clicked.connect(self.show_haptic_feedback_transition)
         self.haptic_feedback_page.back_requested.connect(self.haptic_feedback_back)
 
         # page 6 → Spring Dampener Tuning Page
         self.spring_dampener_page = SpringDampenerPageWidget(self.ser)
         self.stack.addWidget(self.spring_dampener_page)
-        self.menu_page.spgdmp_btn.clicked.connect(self.show_spring_dampener)
+        self.menu_page.spgdmp_btn.clicked.connect(self.show_spring_dampener_transition)
         self.spring_dampener_page.back_requested.connect(self.spring_dampener_back)
         
     def show_afm_transition(self):
@@ -236,15 +238,67 @@ class MainWindow(QMainWindow):
         # Start the white circle shrinking animation (coming back from Power Pong)
         self.menu_page.start_white_circle_animation()
 
-    def show_haptic_feedback(self):
-        """Send Haptic Feedback command to Arduino and switch to Haptic Feedback page"""
+    def show_spring_dampener_transition(self):
+        """Show Spring Dampener transition animation before switching to Spring Dampener page"""
         
-        # Send Haptic Feedback command to Arduino (H = Haptic Feedback mode)
+        # Send Spring Dampener command to Arduino immediately (S = Spring Dampener mode)
+        self.ser.write(b"S\n")
+        self.ser.flush()
+        
+        # Create Spring Dampener transition animation
+        self.spring_dampener_transition = SpringDampenerAnimation()
+        
+        self.spring_dampener_transition.animation_complete.connect(self.complete_spring_dampener_transition)
+        
+        # Show animation as overlay - set parent to stack widget for proper positioning
+        self.spring_dampener_transition.setParent(self.stack)
+        self.spring_dampener_transition.raise_()
+        self.spring_dampener_transition.show()
+        
+        # Start animation
+        self.spring_dampener_transition.start_animation()
+        
+    def complete_spring_dampener_transition(self):
+        """Called when Spring Dampener transition animation completes"""
+        # Hide the transition animation
+        if hasattr(self, 'spring_dampener_transition'):
+            self.spring_dampener_transition.hide()
+            self.spring_dampener_transition.deleteLater()
+        
+        # Switch to Spring Dampener page
+        self.stack.setCurrentWidget(self.spring_dampener_page)
+
+    def show_haptic_feedback_transition(self):
+        """Show Haptic Feedback transition animation before switching to Haptic Feedback page"""
+        
+        # Send Haptic Feedback command to Arduino immediately (H = Haptic Feedback mode)
         self.ser.write(b"H\n")
         self.ser.flush()
         
-        # Switch directly to Haptic Feedback page (no transition animation)
+        # Create Haptic Feedback transition animation
+        self.haptic_feedback_transition = HapticFeedbackAnimation()
+        
+        self.haptic_feedback_transition.animation_complete.connect(self.complete_haptic_feedback_transition)
+        
+        # Show animation as overlay - set parent to stack widget for proper positioning
+        self.haptic_feedback_transition.setParent(self.stack)
+        self.haptic_feedback_transition.raise_()
+        self.haptic_feedback_transition.show()
+        
+        # Start animation
+        self.haptic_feedback_transition.start_animation()
+        
+    def complete_haptic_feedback_transition(self):
+        """Called when Haptic Feedback transition animation completes"""
+        # Hide the transition animation
+        if hasattr(self, 'haptic_feedback_transition'):
+            self.haptic_feedback_transition.hide()
+            self.haptic_feedback_transition.deleteLater()
+        
+        # Switch to Haptic Feedback page
         self.stack.setCurrentWidget(self.haptic_feedback_page)
+
+
 
     def haptic_feedback_back(self):
         """Send stop command to Arduino and return to main menu from Haptic Feedback page"""
@@ -256,15 +310,7 @@ class MainWindow(QMainWindow):
         # Switch back to main menu
         self.stack.setCurrentWidget(self.menu_page)
 
-    def show_spring_dampener(self):
-        """Send Spring Dampener command to Arduino and switch to Spring Dampener page"""
-        
-        # Send Spring Dampener command to Arduino (S = Spring Dampener mode)
-        self.ser.write(b"S\n")
-        self.ser.flush()
-        
-        # Switch directly to Spring Dampener page (no transition animation)
-        self.stack.setCurrentWidget(self.spring_dampener_page)
+
 
     def spring_dampener_back(self):
         """Send stop command to Arduino and return to main menu from Spring Dampener page"""

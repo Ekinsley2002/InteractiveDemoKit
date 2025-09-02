@@ -1,0 +1,41 @@
+Newest Addition Notes:
+
+
+Problems in nav:
+PP->Spring->AFM->Haptic (haptic doesn't work) (Slighltly fixed) (Commit #1)
+
+
+Bugs to fix:
+Adders in haptic feedback values are not centered vertically.
+
+Haptic feedback working at all with buttons?
+
+
+Critical:
+Send parameters is not constant and can cause the program to crash. (Especially going from afm to spring) X
+
+Spring Dampener will go all the way back to the zero point. This is dangerous if users spin the motor in haptic then go to Spring Dampener. 
+
+Quality upgrades:
+Make clear prev trial button/add to layout
+
+Make Zero line stay at zero in afm
+
+Find better data storage for afm/topology
+
+Transition for haptic
+
+Transition for spring dampener
+
+If possible make gear in main menu less glitchy
+
+Make power pong nicer
+
+add simple tutorials
+
+add animation for some buttons like FORE!
+
+(I like the idea of audio cues to make it nicer)
+
+X = Under construction
+V = Finished
