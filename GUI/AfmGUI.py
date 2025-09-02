@@ -430,7 +430,10 @@ class AfmPageWidget(QWidget):
         self.references_requested.emit()
 
     def showEvent(self, event):
-        self._resume_if_needed()
+        # Only resume if we're actually becoming the current page (not just briefly shown during transitions)
+        # Check if the parent stack widget's current widget is this AFM page
+        if hasattr(self.parent(), 'currentWidget') and self.parent().currentWidget() == self:
+            self._resume_if_needed()
         super().showEvent(event)
         
         # Always reset and recreate the overlays when the page is shown
@@ -462,9 +465,16 @@ class AfmPageWidget(QWidget):
         """User hit Back -> start blue transition animation, then switch to menu."""
         # Stop the data stream and reset
         self.timer.stop()
-        self.ser.write(b"M")          # MAIN_MENU  = 0  ➜ pause Arduino
-        self.ser.flush()
+        # Note: Don't send M command here - main.py will handle it
         self._full_reset()
+        
+        # CRITICAL: Clear any pending serial data to prevent conflicts
+        if hasattr(self, 'ser') and self.ser:
+            try:
+                self.ser.reset_input_buffer()
+                self.ser.reset_output_buffer()
+            except:
+                pass
         
         # Clean up shrinking animation state
         if self.circle_overlay is not None:

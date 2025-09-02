@@ -266,41 +266,35 @@ void goToMainMenu(char* cmd) {
   }
 }
 
-/**
- * Random 0.00 – 0.10 to Serial
- * --------------------------------
- * Sends a new random float in the range 0.00–0.10 (steps of 0.01)
- * every second.
- */
+
 void setup() {
   Serial.begin(115200);
 
-  // Use an unconnected analog pin to add a little entropy.
-  // If all your pins are in use, set a fixed seed instead (e.g., randomSeed(42)).
+
   randomSeed(analogRead(A0));
   pinMode(ledPin, OUTPUT); 
   digitalWrite(ledPin, LOW);
   
   // Initialize global commander with all commands
-  navigationCommander.add('A', goToAFM, "go to AFM mode");
-  navigationCommander.add('P', goToPowerPong, "go to Power Pong mode");
-  navigationCommander.add('H', goToHapticFeedback, "go to Haptic Feedback mode");
-  navigationCommander.add('S', goToSpringDampener, "go to Spring Dampener mode");
-  navigationCommander.add('M', goToMainMenu, "go to main menu");
+  navigationCommander.add('A', goToAFM, "");
+  navigationCommander.add('P', goToPowerPong, "");
+  navigationCommander.add('H', goToHapticFeedback, "");
+  navigationCommander.add('S', goToSpringDampener, "");
+  navigationCommander.add('M', goToMainMenu, "");
   
   // Add PowerPong commands
-  navigationCommander.add('T', doTarget, "target velocity");
-  navigationCommander.add('O', doOffset, "set offset");
-  navigationCommander.add('R', doResetZero, "reset zero point");
-  navigationCommander.add('G', doMove270, "move 270 degrees and back");
-  navigationCommander.add('E', goBack, "go back to main menu");
+  navigationCommander.add('T', doTarget, "");
+  navigationCommander.add('O', doOffset, "");
+  navigationCommander.add('R', doResetZero, "");
+  navigationCommander.add('G', doMove270, "");
+  navigationCommander.add('E', goBack, "");
   
   // Add SpringDampener commands
-  navigationCommander.add('K', doSpringConstant, "spring constant");
-  navigationCommander.add('D', doDampingConstant, "damping constant");
-  navigationCommander.add('Q', doToggleSetpoint, "toggle setpoint");
+  navigationCommander.add('K', doSpringConstant, "");
+  navigationCommander.add('D', doDampingConstant, "");
+  navigationCommander.add('Q', doToggleSetpoint, "");
   
-  Serial.println("Interactive Kits V5 - Ready");
+  Serial.println("Ready");
   setMotorReady();
 }
 

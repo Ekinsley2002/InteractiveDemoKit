@@ -84,6 +84,10 @@ class SpringDampenerPageWidget(QWidget):
         self.serial_connection = serial_connection
         self.data_collection_active = False
         self.swing_data = []
+        
+        # Add safety mechanism to prevent rapid button clicking
+        self.last_test_time = 0
+        self.min_test_interval = 0.5  # Minimum 2 seconds between test commands
 
         self.setObjectName("SpringDampenerPage")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -238,6 +242,20 @@ class SpringDampenerPageWidget(QWidget):
         self._write(f"D{value}\n")
 
     def _send_test_parameters(self):
+        # Safety check: prevent rapid button clicking
+        current_time = time.time()
+        if current_time - self.last_test_time < self.min_test_interval:
+            return  # Ignore rapid clicks
+        
+        self.last_test_time = current_time
+        
+        # CRITICAL: Clear serial buffer before sending test command
+        if self.serial_connection:
+            try:
+                self.serial_connection.reset_input_buffer()
+            except:
+                pass
+        
         self._write("Q\n")
         # Start collecting swing data
         self._start_data_collection()
@@ -401,7 +419,8 @@ class SpringDampenerPageWidget(QWidget):
         try:
             # Check if data is available
             if self.serial_connection.in_waiting > 0:
-                line = self.serial_connection.readline().decode('utf-8').strip()
+                # Add timeout to prevent blocking
+                line = self.serial_connection.readline().decode('utf-8', errors='ignore').strip()
                 
                 # Check for start signal
                 if line == "DATA_START":
@@ -462,6 +481,21 @@ class SpringDampenerPageWidget(QWidget):
                         f.write(f"{time_val:.3f},{position_val:.3f}\n")
                 
             except Exception:
+                pass
+
+    def showEvent(self, event):
+        """Called when Spring Dampener page is shown"""
+        super().showEvent(event)
+        # Stop any existing data collection when page is shown
+        if hasattr(self, 'data_collection_active') and self.data_collection_active:
+            self._stop_data_collection()
+        
+        # CRITICAL: Clear any pending serial data from previous pages
+        if self.serial_connection:
+            try:
+                self.serial_connection.reset_input_buffer()
+                self.serial_connection.reset_output_buffer()
+            except:
                 pass
 
     def go_back(self):

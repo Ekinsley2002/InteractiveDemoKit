@@ -2,7 +2,8 @@ Newest Addition Notes:
 
 
 Problems in nav:
-PP->Spring->AFM->Haptic (haptic doesn't work) (Slighltly fixed) (Commit #1)
+PP->Spring->AFM->Haptic (haptic doesn't work) (Slighltly fixed) (Commit #1) V
+PP->
 
 
 Bugs to fix:
@@ -12,7 +13,7 @@ Haptic feedback working at all with buttons?
 
 
 Critical:
-Send parameters is not constant and can cause the program to crash. (Especially going from afm to spring) X
+Send parameters is not constant and can cause the program to crash. (Especially going from afm to spring) V
 
 Spring Dampener will go all the way back to the zero point. This is dangerous if users spin the motor in haptic then go to Spring Dampener. 
 

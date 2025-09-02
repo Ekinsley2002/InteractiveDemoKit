@@ -1,13 +1,8 @@
 #include <SimpleFOC.h>
 
-// velocity set point variable
 float target_velocity = 2;
 float zero_point = 0;
-
-// Exit flag for PowerPong loop
 bool powerPongExitFlag = false;
-
-// Use global navigation commander (declared in main.ino)
 void doTarget(char* cmd) { navigationCommander.scalar(&target_velocity, cmd); }
 void doMove270(char* cmd);
 void doResetZero(char* cmd);
@@ -42,7 +37,20 @@ void setupPowerPong() {
   motor.voltage.d = 0;
   delay(500);
   setMotorReady();
-  doResetZero('R0'); // 
+  
+  float desired_zero = 4.38;
+  while (abs(sensor.getAngle() - desired_zero) > 0.01) {
+    float current_angle = sensor.getAngle();
+    float error = desired_zero - current_angle;
+    float move_speed = error * 2.0;
+    if (move_speed > 4.0) move_speed = 4.0;
+    if (move_speed < -4.0) move_speed = -4.0;
+    motor.move(move_speed);
+    motor.loopFOC();
+  }
+  motor.move(0);
+  zero_point = desired_zero;
+  
   _delay(1000);
 }
 
@@ -76,82 +84,44 @@ bool powerPongLoop() {
 
 
 void doMove270(char* cmd) {
-  // Save the current position as the initial zero point
-  float zero_point = sensor.getAngle();
-
   float swing_finish = zero_point + 1;
-
+  float target_angle = zero_point - 5.236;
   
-  // Calculate the target angle for 270 degrees
-  float target_angle = zero_point - (300.0 * (PI / 180.0)); // Convert degrees to radians
-  
-  // Rotate to 270 degrees
   while (sensor.getAngle() > target_angle) {
     motor.move(-4);
     motor.loopFOC();
   }
-  
-  // Stop the motor
   motor.move(0);
   delay(2000);
   
-  Serial.println("FORE!");
-  
-  // Swing back to swing finish
   while (sensor.getAngle() < swing_finish) {
     motor.move(target_velocity);
     motor.loopFOC();
   }
-  
-  // Stop the motor
   motor.move(0);
 }
 
 void doResetZero(char* cmd) {
-
-  float offset = 0;
-
-  // Calculate the new zero point by adding the offset to the current zero point
-  float new_zero = 4.38;
-
-  // Move to the new zero point
-  float current_angle = sensor.getAngle();
-  float angle_difference = new_zero - current_angle;
-  
-  if (angle_difference > 0) {
-    while (current_angle < new_zero) {
-      motor.move(4);
-      motor.loopFOC();
-      current_angle = sensor.getAngle();
-    }
-  } else {
-    while (current_angle > new_zero) {
-      motor.move(-4);
-      motor.loopFOC();
-      current_angle = sensor.getAngle();
-    }
+  float desired_zero = 4.38;
+  while (abs(sensor.getAngle() - desired_zero) > 0.01) {
+    float current_angle = sensor.getAngle();
+    float error = desired_zero - current_angle;
+    float move_speed = error * 2.0;
+    if (move_speed > 4.0) move_speed = 4.0;
+    if (move_speed < -4.0) move_speed = -4.0;
+    motor.move(move_speed);
+    motor.loopFOC();
   }
-
-  // Stop the motor
   motor.move(0);
+  zero_point = desired_zero;
 }
 
 void doOffset(char* cmd) {
-  // Directly convert the command to a float offset
   float offset = atof(cmd);
-
-  // Print the offset for debugging
-  Serial.print("Moving to Offset: ");
-  Serial.println(offset, 4);
-
-  // Calculate the new zero point by adding the offset to the current zero point
   float new_zero = zero_point + offset;
-
-  // Move to the new zero point
   float current_angle = sensor.getAngle();
-  float angle_difference = new_zero - current_angle;
   
-  if (angle_difference > 0) {
+  if (new_zero > current_angle) {
     while (current_angle < new_zero) {
       motor.move(4);
       motor.loopFOC();
@@ -164,8 +134,5 @@ void doOffset(char* cmd) {
       current_angle = sensor.getAngle();
     }
   }
-
-  // Stop the motor
   motor.move(0);
-  
 }

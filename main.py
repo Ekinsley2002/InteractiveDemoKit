@@ -186,6 +186,13 @@ class MainWindow(QMainWindow):
         
     def complete_afm_back_transition(self):
         """Called when coming back from AFM page to main menu"""
+        # CRITICAL: Clear serial buffers to prevent conflicts
+        try:
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+        except:
+            pass
+        
         # Send MAIN_MENU command to Arduino to reset it from AFM mode
         self.ser.write(b"M\n")
         self.ser.flush()
@@ -241,6 +248,9 @@ class MainWindow(QMainWindow):
     def show_spring_dampener_transition(self):
         """Show Spring Dampener transition animation before switching to Spring Dampener page"""
         
+        # Clear any leftover serial data from previous modes
+        self.ser.reset_input_buffer()
+        
         # Send Spring Dampener command to Arduino immediately (S = Spring Dampener mode)
         self.ser.write(b"S\n")
         self.ser.flush()
@@ -270,6 +280,9 @@ class MainWindow(QMainWindow):
 
     def show_haptic_feedback_transition(self):
         """Show Haptic Feedback transition animation before switching to Haptic Feedback page"""
+        
+        # Clear any leftover serial data from previous modes
+        self.ser.reset_input_buffer()
         
         # Send Haptic Feedback command to Arduino immediately (H = Haptic Feedback mode)
         self.ser.write(b"H\n")

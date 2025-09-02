@@ -14,9 +14,10 @@ class Picker(QWidget):
 
     COL_W = 200
 
-    def __init__(self, title: str, parent: QWidget | None = None):
+    def __init__(self, title: str, increment: int = 1, parent: QWidget | None = None):
         super().__init__(parent)
         self._value = 0
+        self._increment = increment
 
         v = QVBoxLayout(self)
         v.setSpacing(12)
@@ -57,8 +58,9 @@ class Picker(QWidget):
         return btn
 
     def _bump(self, delta: int):
-        if 0 <= self._value + delta <= 50:
-            self._value += delta
+        new_value = self._value + (delta * self._increment)
+        if 0 <= new_value <= 50:
+            self._value = new_value
             self.value_lbl.setText(str(self._value))
 
     def _emit_add(self):
@@ -171,7 +173,7 @@ class PowerPongPageWidget(QWidget):
         # Picker controls
         row = QHBoxLayout(); row.setSpacing(40)
 
-        self.speed_picker  = Picker("Speed")
+        self.speed_picker  = Picker("Speed", increment=5)
         self.offset_picker = Picker("Offset")
 
         # wire pickers to serial ------------------------------------------------
