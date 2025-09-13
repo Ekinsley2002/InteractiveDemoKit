@@ -329,7 +329,9 @@ class PowerPongPageWidget(QWidget):
                 
     def go_back(self):
         """User hit Back -> start white transition animation, then switch to menu."""
-        self.ser.write(b"E")
+        # Send MAIN_MENU command to Arduino 
+        self.ser.write(b"M\n")
+        self.ser.flush()
         # Clean up shrinking animation state
         if self.circle_overlay is not None:
             self.shrink_animation_timer.stop()

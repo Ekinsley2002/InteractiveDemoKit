@@ -193,10 +193,6 @@ class MainWindow(QMainWindow):
         except:
             pass
         
-        # Send MAIN_MENU command to Arduino to reset it from AFM mode
-        self.ser.write(b"M\n")
-        self.ser.flush()
-        
         # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
         
@@ -236,8 +232,6 @@ class MainWindow(QMainWindow):
     def complete_power_pong_back_transition(self):
         """Called when coming back from Power Pong page to main menu"""
         # Send MAIN_MENU command to Arduino to reset it from Power Pong mode
-        self.ser.write(b"M\n")
-        self.ser.flush()
         
         # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
@@ -317,9 +311,6 @@ class MainWindow(QMainWindow):
         """Send stop command to Arduino and return to main menu from Haptic Feedback page"""
         
         # Send stop command to Arduino (M = main menu mode)
-        self.ser.write(b"M\n")
-        self.ser.flush()
-        
         # Switch back to main menu
         self.stack.setCurrentWidget(self.menu_page)
 
@@ -327,10 +318,6 @@ class MainWindow(QMainWindow):
 
     def spring_dampener_back(self):
         """Send stop command to Arduino and return to main menu from Spring Dampener page"""
-        
-        # Send stop command to Arduino (M = main menu mode)
-        self.ser.write(b"M\n")
-        self.ser.flush()
         
         # Switch back to main menu
         self.stack.setCurrentWidget(self.menu_page)

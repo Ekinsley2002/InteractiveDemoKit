@@ -467,6 +467,10 @@ class AfmPageWidget(QWidget):
         self.timer.stop()
         # Note: Don't send M command here - main.py will handle it
         self._full_reset()
+
+        # Send MAIN_MENU command to Arduino to reset it from AFM mode
+        self.ser.write(b"M\n")
+        self.ser.flush()
         
         # CRITICAL: Clear any pending serial data to prevent conflicts
         if hasattr(self, 'ser') and self.ser:

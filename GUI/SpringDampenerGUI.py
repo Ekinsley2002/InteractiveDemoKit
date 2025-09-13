@@ -499,4 +499,7 @@ class SpringDampenerPageWidget(QWidget):
                 pass
 
     def go_back(self):
+        # Send MAIN_MENU command to Arduino to reset it from AFM mode
+        self.serial_connection.write(b"M\n")
+        self.serial_connection.flush()
         self.back_requested.emit()
