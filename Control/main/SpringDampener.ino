@@ -5,7 +5,7 @@ float damping_constant = 3.0;
 float previous_position = 0;
 unsigned long previous_time = 0;
 bool toggle_state = false;
-float zero_position = 0.8;
+float zero_position = 0.0; // Will be set to current position on startup
 float target_offset = 2.094;
 unsigned long start_time = 0;
 bool logging = false;
@@ -18,42 +18,15 @@ void doToggleSetpoint(char* cmd) {
   toggle_state = !toggle_state;
   start_time = millis();
   logging = true;
-  Serial.println("S");
+  Serial.println(F("S"));
+  Serial.println(MOTOR_MOVING);
 }
 void setupSpringDampener() {
-  pinMode(7, OUTPUT);
-  digitalWrite(7, LOW);
-  disableMotor();
-  sensor.init();
-  driver.voltage_power_supply = 12;
-  driver.voltage_limit = 6;
-  motor.voltage_limit = 6;
-  driver.init();
-  motor.linkSensor(&sensor);
-  motor.linkDriver(&driver);
-  motor.voltage_sensor_align = 2;
-  motor.foc_modulation = FOCModulationType::SpaceVectorPWM;
-  motor.controller = MotionControlType::torque;
-  motor.init();
-  motor.initFOC();
-  motor.enable();
-  motor.target = 0;
-  motor.voltage.q = 0;
-  motor.voltage.d = 0;
-  delay(500);
-  setMotorReady();
-  float desired_zero = 0.8;
-  while (abs(sensor.getAngle() - desired_zero) > 0.01) {
-    float current_angle = sensor.getAngle();
-    float error = desired_zero - current_angle;
-    float move_speed = error * 2.0;
-    if (move_speed > 4.0) move_speed = 4.0;
-    if (move_speed < -4.0) move_speed = -4.0;
-    motor.move(move_speed);
-    motor.loopFOC();
-  }
-  motor.move(0);
-  zero_position = desired_zero;
+  setupMotorForMode(MotionControlType::torque, 6.0f);
+  
+  // Use current position as zero reference instead of moving to fixed position
+  zero_position = sensor.getAngle();
+  
   navigationCommander.add('K', doSpringConstant, "");
   navigationCommander.add('D', doDampingConstant, "");
   navigationCommander.add('Q', doToggleSetpoint, "");
@@ -86,18 +59,10 @@ void springDampenerLoop() {
                 }
 
   navigationCommander.run();
+  print(MOTOR_NOT_MOVING);
 }
 void cleanupSpringDampener() {
-  if (motor.driver != nullptr) {
-    motor.move(0);
-    motor.disable();
-    delay(300);
-    motor.target = 0;
-    motor.voltage.q = 0;
-    motor.voltage.d = 0;
-    motor.PID_velocity.reset();
-    delay(100);
-  }
+  cleanupMotorForMode();
   resetSpringDampenerState();
 }
 void resetSpringDampenerState() {

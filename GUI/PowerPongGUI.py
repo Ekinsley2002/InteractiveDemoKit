@@ -391,3 +391,8 @@ class PowerPongPageWidget(QWidget):
         self._reset_shrink_animation()
         self._reset_white_transition()  # Also reset white transition state
         self.shrink_animation_timer.start()
+
+    def check_for_character():
+        """Checks serial for characters, used for motor movement"""
+        if ser.in_waiting > 0:
+            data = ser.read().decode('utf-8')

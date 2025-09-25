@@ -9,17 +9,17 @@ BLDCDriver3PWM    driver = BLDCDriver3PWM(6, 5, 3, 4);
 // Global navigation commander
 Commander navigationCommander = Commander(Serial);
 
-// Angle helpers
+// Angle helpers - using PROGMEM for constants
 #define _DEG2RAD 0.01745329251994329577f
 #define _RAD2DEG 57.295779513082320876f
 
-//const float ZERO_DEG = 254.00f;                  // mech. reference
-const float ZERO_DEG = 256.00f;
-const float ZERO_RAD = ZERO_DEG * _DEG2RAD;
+const float ZERO_DEG PROGMEM = 256.00f;
+const float ZERO_RAD PROGMEM = 4.468f; // Pre-calculated: 256 * DEG2RAD
+const float ALPHA PROGMEM = 0.15f;
 
-// Software smoother
-const float  ALPHA = 0.15f;
-static float angleFilt = ZERO_RAD;
+const float INITIAL_ZERO_R = 4.468f;
+
+static float angleFilt = 4.468f; // ZERO_RAD value
 
 
 // Navigation state
@@ -48,6 +48,9 @@ const unsigned long MOTOR_STABILIZATION_TIME = 500;
 // EMERGENCY FAILSAFE SYSTEM
 bool emergencyStop = false;
 
+const char MOTOR_MOVING = 'Z';
+const char MOTOR_NOT_MOVING = 'z'
+
 // Navigation command functions will be defined after canTransition()
 
 // PowerPong command functions (declarations)
@@ -63,6 +66,10 @@ void doSpringConstant(char* cmd);
 void doDampingConstant(char* cmd);
 void doToggleSetpoint(char* cmd);
 
+// HapticFeedback command functions (declarations)
+void doNumTicks(char* cmd);
+void doHapticSpringConstant(char* cmd);
+
 // Cleanup functions
 void cleanupHapticFeedback();
 void cleanupSpringDampener();
@@ -77,6 +84,10 @@ void setMotorReady();
 bool isMotorReady();
 void forceMainMenuReset();
 
+// Shared motor setup functions to reduce code duplication
+void setupMotorForMode(MotionControlType controller_type, float voltage_limit = 6.0f);
+void cleanupMotorForMode();
+
 // EMERGENCY FAILSAFE FUNCTIONS
 void emergencyMotorStop();
 bool checkEmergencyConditions();
@@ -87,6 +98,10 @@ void goToPowerPong(char* cmd);
 void goToHapticFeedback(char* cmd);
 void goToSpringDampener(char* cmd);
 void goToMainMenu(char* cmd);
+
+void resetMotorPosition();
+
+float global_zero = INITIAL_ZERO_R; // used by AFM and power pong
 
 // Motor control functions
 void disableMotor() {
@@ -121,25 +136,9 @@ bool isMotorReady() {
 }
 
 void forceMainMenuReset() {
-  if (motor.driver != nullptr) {
-    motor.move(0);
-    motor.disable();
-    driver.disable();
-    delay(500);
-    motor.linkSensor(nullptr);
-    motor.linkDriver(nullptr);
-    motor.target = 0;
-    motor.voltage.q = 0;
-    motor.voltage.d = 0;
-    motor.PID_velocity.reset();
-    motor.P_angle.reset();
-    motor.controller = MotionControlType::torque;
-    setMotorNotReady();
-    delay(1000);
-    motor.linkSensor(&sensor);
-    motor.linkDriver(&driver);
-    setMotorReady();
-  }
+  disableMotor();
+  delay(1000);
+  setMotorReady();
 }
 
 // EMERGENCY FAILSAFE FUNCTIONS
@@ -176,11 +175,9 @@ bool checkMotorOverload() {
 
 void handleTransitionOverload() {
   consecutiveFailures++;
+  delay(1000 * consecutiveFailures);
   if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-    delay(5000);
     consecutiveFailures = 0;
-  } else {
-    delay(1000 * consecutiveFailures);
   }
 }
 
@@ -271,7 +268,6 @@ void setup() {
   Serial.begin(115200);
 
 
-  randomSeed(analogRead(A0));
   pinMode(ledPin, OUTPUT); 
   digitalWrite(ledPin, LOW);
   
@@ -294,7 +290,12 @@ void setup() {
   navigationCommander.add('D', doDampingConstant, "");
   navigationCommander.add('Q', doToggleSetpoint, "");
   
-  Serial.println("Ready");
+  // Add HapticFeedback commands
+  navigationCommander.add('n', doNumTicks, "");
+  navigationCommander.add('k', doHapticSpringConstant, "");
+  
+  bool 
+
   setMotorReady();
 }
 
@@ -320,6 +321,7 @@ void loop() {
     case AFM_MODE:
       if (!afm_initialised) {
         setupAFM();
+        resetMotorPosition();  // ← Move HERE, after setupAFM()
         afm_initialised = true;
       }
       runAFM();
@@ -328,15 +330,18 @@ void loop() {
     case POWER_PONG_MODE:
       afm_initialised = false;
       runPowerPong();
+      resetMotorPosition();  // ← Move HERE, after runPowerPong() sets up motor
       return;
 
     case SPRING_DAMPENER_MODE:
       runSpringDampener();
+      resetMotorPosition();  // ← Move HERE, after runSpringDampener() sets up motor
       afm_initialised = false;
       return;
 
     case HAPTIC_FEEDBACK_MODE:
       runHapticFeedback();
+      resetMotorPosition();  // ← Move HERE, after runHapticFeedback() sets up motor
       afm_initialised = false;
       return;
   }
@@ -361,43 +366,96 @@ void runSpringDampener() {
   cleanupSpringDampener();
 }
 
+void resetMotorPosition() {
+  // First, ensure motor is initialized
+  if (motor.driver == nullptr) {
+    return;
+  }
+  
+  // Store original controller type
+  MotionControlType originalController = motor.controller;
+  
+  // Switch to torque control and reinitialize
+  motor.controller = MotionControlType::torque;
+  motor.init();
+  motor.initFOC();
+  
+  int rotations = 0;
+  float currentAngle = sensor.getAngle();
+  
+  // Count how many full rotations we've made POSITIVE
+  if(currentAngle > INITIAL_ZERO_R + PI) {
+    while (currentAngle > 2 * PI + INITIAL_ZERO_R) {
+      currentAngle -= 2 * PI;
+      rotations++;
+    }
+  }
 
+  // If spun in negative direction, note rotations
+  else if(currentAngle < INITIAL_ZERO_R - PI) {
+    while(currentAngle < 2 * PI - INITIAL_ZERO_R) {
+      currentAngle += 2 * PI;
+      rotations--;
+    }
+  }
+  
+  // Calculate new zero point accounting for rotations
+  // This ensures we go to the SAME absolute position every time
+  float newZero = INITIAL_ZERO_R + (rotations * 2 * PI);
+  
+  global_zero = newZero;
+
+  while (abs(currentAngle - newZero) > 0.01) {
+
+    if(currentAngle < newZero) {
+      motor.move(0.5);
+    }
+
+    else if(currentAngle > newZero) {
+      motor.move(-0.5);
+    }
+
+    motor.loopFOC();
+
+    currentAngle = sensor.getAngle();
+  }
+  
+  
+  motor.move(0);
+  
+  // Restore original controller type and reinitialize
+  motor.controller = originalController;
+  motor.init();
+  motor.initFOC();
+}
 
 void setupAFM() {
-  pinMode(7, OUTPUT); digitalWrite(7, LOW);
   pinMode(LED_BUILTIN, OUTPUT); digitalWrite(LED_BUILTIN, HIGH);
-  disableMotor();
-  sensor.init();
-  driver.voltage_power_supply = 12;
-  driver.init();
-  motor.linkSensor(&sensor);
-  motor.linkDriver(&driver);
-  motor.controller = MotionControlType::angle;
+  setupMotorForMode(MotionControlType::angle, 6.0f);
+  
+  // Configure angle controller specific settings
   motor.P_angle.P = 30.0f;
   motor.PID_velocity.P = 0.25f;
   motor.PID_velocity.I = 2.0f;
-  motor.voltage_limit = 6.0f;
   motor.LPF_velocity.Tf = 0.01f;
-  motor.voltage_sensor_align = 2;
-  motor.init();
-  motor.initFOC();
-  motor.enable();
-  motor.target = ZERO_RAD;
-  delay(500);
-  setMotorReady();
+  
+  // Set target for angle controller
+  motor.target = global_zero;
 }
 
 void runAFM() {
   while (currentMode == AFM_MODE) {
     navigationCommander.run();
     motor.loopFOC();
-    motor.move(ZERO_RAD);
+    motor.move(global_zero);
     static uint32_t t0 = 0;
     if (millis() - t0 >= 10) {
       t0 = millis();
       float rawRad = sensor.getAngle();
-      angleFilt = (1.0f - ALPHA) * angleFilt + ALPHA * rawRad;
-      float deltaRad = fmodf((ZERO_RAD - angleFilt) + _2PI, _2PI);
+      float alpha = pgm_read_float(&ALPHA);
+      angleFilt = (1.0f - alpha) * angleFilt + alpha * rawRad;
+      float zeroRad = pgm_read_float(&ZERO_RAD);
+      float deltaRad = fmodf((zeroRad - angleFilt) + _2PI, _2PI);
       float deltaDeg = deltaRad * _RAD2DEG;
       if (deltaDeg > 100.0f) deltaDeg = 0.0f;
       Serial.println(deltaDeg, 3);
@@ -415,4 +473,42 @@ void runPowerPong() {
     }
   }
   cleanupPowerPong();
+}
+
+// Shared motor setup function to reduce code duplication
+void setupMotorForMode(MotionControlType controller_type, float voltage_limit) {
+  pinMode(7, OUTPUT);
+  digitalWrite(7, LOW);
+  disableMotor();
+  sensor.init();
+  motor.linkSensor(&sensor);
+  driver.voltage_power_supply = 12;
+  driver.voltage_limit = voltage_limit;
+  motor.voltage_limit = voltage_limit;
+  driver.init();
+  motor.linkDriver(&driver);
+  motor.voltage_sensor_align = 2;
+  motor.foc_modulation = FOCModulationType::SpaceVectorPWM;
+  motor.controller = controller_type;
+  motor.init();
+  motor.initFOC();
+  motor.enable();
+  motor.target = 0;
+  motor.voltage.q = 0;
+  motor.voltage.d = 0;
+  delay(500);
+  setMotorReady();
+}
+
+void cleanupMotorForMode() {
+  if (motor.driver != nullptr) {
+    motor.move(0);
+    motor.disable();
+    delay(300);
+    motor.target = 0;
+    motor.voltage.q = 0;
+    motor.voltage.d = 0;
+    motor.PID_velocity.reset();
+    delay(100);
+  }
 }

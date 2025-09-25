@@ -5,32 +5,40 @@ void disableMotor();
 void setMotorReady();
 
 // Haptic tick variables
-const int num_ticks = 8; // Adjustable
-const float tick_angle = _2PI / num_ticks;
+int num_ticks = 8; // Adjustable - now dynamic
+float tick_angle = _2PI / 8; // Will be recalculated when num_ticks changes
 float last_angle = 0;
 float snap_threshold = tick_angle / 20.0; // Threshold for snapping to the nearest tick
 float spring_constant = 2.5; // Proportional strength of the spring (adjustable)
 
+// Parameter update functions
+void updateNumTicks(int new_ticks) {
+  if (new_ticks > 0 && new_ticks <= 50) { // Reasonable bounds
+    num_ticks = new_ticks;
+    tick_angle = _2PI / num_ticks;
+    snap_threshold = tick_angle / 20.0;
+  }
+}
+
+void updateSpringConstant(float new_constant) {
+  if (new_constant > 0.0 && new_constant <= 20.0) { // Reasonable bounds
+    spring_constant = new_constant;
+  }
+}
+
+// Command handlers for serial communication
+void doNumTicks(char* cmd) {
+  int new_ticks = atoi(cmd);
+  updateNumTicks(new_ticks);
+}
+
+void doHapticSpringConstant(char* cmd) {
+  float new_constant = atof(cmd);
+  updateSpringConstant(new_constant);
+}
+
 void setupHapticFeedback() {
-  pinMode(7, OUTPUT);
-  digitalWrite(7, LOW);
-  disableMotor();
-  sensor.init();
-  motor.linkSensor(&sensor);
-  driver.voltage_power_supply = 12;
-  driver.init();
-  motor.linkDriver(&driver);
-  motor.voltage_sensor_align = 5;
-  motor.foc_modulation = FOCModulationType::SpaceVectorPWM;
-  motor.controller = MotionControlType::torque;
-  motor.init();
-  motor.initFOC();
-  motor.enable();
-  motor.target = 0;
-  motor.voltage.q = 0;
-  motor.voltage.d = 0;
-  delay(500);
-  setMotorReady();
+  setupMotorForMode(MotionControlType::torque, 6.0f);
   Serial.println(F("Motor ready."));
   _delay(1000);
 }
@@ -55,14 +63,5 @@ void hapticFeedbackLoop() {
 }
 
 void cleanupHapticFeedback() {
-  if (motor.driver != nullptr) {
-    motor.move(0);
-    motor.disable();
-    delay(300);
-    motor.target = 0;
-    motor.voltage.q = 0;
-    motor.voltage.d = 0;
-    motor.PID_velocity.reset();
-    delay(100);
-  }
+  cleanupMotorForMode();
 }
