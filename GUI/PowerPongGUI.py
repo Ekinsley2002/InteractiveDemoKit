@@ -252,7 +252,7 @@ class PowerPongPageWidget(QWidget):
         self.ser.flush()
 
     def _send_speed(self, value: int):
-        self._write(f"T{value}\n")
+        self._write(f"T{value * 2}\n")
 
     def _send_offset(self, value: int):
         self._write(f"O{value}\n")
