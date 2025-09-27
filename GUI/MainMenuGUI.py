@@ -208,13 +208,46 @@ class MenuPage(QWidget):
         # Load and display the initial gear image
         self.update_gear_rotation()
         
+        # Create restart button (always visible)
+        self.restart_button = QPushButton("RST", self)
+        self.restart_button.setObjectName("RestartBtn")
+        self.restart_button.setFixedSize(35, 30)
+        self.restart_button.move(10, 10)  # Position in top left corner
+        self.restart_button.raise_()  # Ensure it's on top
+        
+        # Apply green styling for restart button
+        self.restart_button.setStyleSheet("""
+            QPushButton {
+                background-color: #00AA00;
+                color: white;
+                border: 2px solid #008800;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 12px;
+                padding: 2px;
+                margin: 0px;
+                min-width: 35px;
+                max-width: 35px;
+                min-height: 30px;
+                max-height: 30px;
+            }
+            QPushButton:hover {
+                background-color: #00CC00;
+            }
+            QPushButton:pressed {
+                background-color: #008800;
+            }
+        """)
+        
+        self.restart_button.clicked.connect(self.restart_app)
+
         # Escape button (dev mode only)
         if Config.DEV_MODE:
             # Create escape button for development mode - completely independent styling
             self.escape_button = QPushButton("ESC", self)
             self.escape_button.setObjectName("EscapeBtn")
             self.escape_button.setFixedSize(35, 30)
-            self.escape_button.move(10, 10)  # Position in top left corner
+            self.escape_button.move(55, 10)  # Position next to restart button
             self.escape_button.raise_()  # Ensure it's on top
             
             # Apply minimal inline styling to bypass all QSS constraints
@@ -242,39 +275,6 @@ class MenuPage(QWidget):
             """)
             
             self.escape_button.clicked.connect(self.quit_app)
-            
-            # Create restart button next to escape button
-            self.restart_button = QPushButton("RST", self)
-            self.restart_button.setObjectName("RestartBtn")
-            self.restart_button.setFixedSize(35, 30)
-            self.restart_button.move(55, 10)  # Position next to escape button
-            self.restart_button.raise_()  # Ensure it's on top
-            
-            # Apply green styling for restart button
-            self.restart_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #00AA00;
-                    color: white;
-                    border: 2px solid #008800;
-                    border-radius: 4px;
-                    font-weight: bold;
-                    font-size: 12px;
-                    padding: 2px;
-                    margin: 0px;
-                    min-width: 35px;
-                    max-width: 35px;
-                    min-height: 30px;
-                    max-height: 30px;
-                }
-                QPushButton:hover {
-                    background-color: #00CC00;
-                }
-                QPushButton:pressed {
-                    background-color: #008800;
-                }
-            """)
-            
-            self.restart_button.clicked.connect(self.restart_app)
         
         # Headline
         headline = QLabel("Welcome to Metrology, Motors, and More!")

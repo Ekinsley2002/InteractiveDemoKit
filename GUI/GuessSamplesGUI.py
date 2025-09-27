@@ -219,21 +219,19 @@ class GuessSamplesPageWidget(QWidget):
             images_container.addWidget(drop_zone)
         
         layout.addLayout(images_container)
-        
-        # Guess button and feedback
-        button_container = QHBoxLayout()
-        
+        # Guess button - centered
         self.guess_button = QPushButton("GUESS!")
         self.guess_button.setObjectName("GuessBtn")
         self.guess_button.setStyleSheet("""
             QPushButton#GuessBtn {
-                font: 600 20px 'Roboto';
+                font: 600 18px 'Roboto';
                 color: #FFFFFF;
                 background-color: #00AA00;
                 border: 2px solid #008800;
                 border-radius: 8px;
-                padding: 15px 30px;
-                min-width: 150px;
+                padding: 12px 25px;
+                min-width: 120px;
+                max-width: 120px;
             }
             QPushButton#GuessBtn:hover {
                 background-color: #00CC00;
@@ -243,9 +241,9 @@ class GuessSamplesPageWidget(QWidget):
             }
         """)
         self.guess_button.clicked.connect(self.check_guess)
-        button_container.addWidget(self.guess_button)
+        layout.addWidget(self.guess_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         
-        # Feedback label
+        # Feedback label - centered below button
         self.feedback_label = QLabel("")
         self.feedback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.feedback_label.setStyleSheet("""
@@ -254,11 +252,10 @@ class GuessSamplesPageWidget(QWidget):
                 font: 600 16px 'Roboto';
                 background-color: transparent;
                 border: none;
+                margin: 5px;
             }
         """)
-        button_container.addWidget(self.feedback_label)
-        
-        layout.addLayout(button_container)
+        layout.addWidget(self.feedback_label, alignment=Qt.AlignmentFlag.AlignHCenter)
         
         # Back button
         back_btn = QPushButton("Back")
