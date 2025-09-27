@@ -242,6 +242,39 @@ class MenuPage(QWidget):
             """)
             
             self.escape_button.clicked.connect(self.quit_app)
+            
+            # Create restart button next to escape button
+            self.restart_button = QPushButton("RST", self)
+            self.restart_button.setObjectName("RestartBtn")
+            self.restart_button.setFixedSize(35, 30)
+            self.restart_button.move(55, 10)  # Position next to escape button
+            self.restart_button.raise_()  # Ensure it's on top
+            
+            # Apply green styling for restart button
+            self.restart_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #00AA00;
+                    color: white;
+                    border: 2px solid #008800;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    font-size: 12px;
+                    padding: 2px;
+                    margin: 0px;
+                    min-width: 35px;
+                    max-width: 35px;
+                    min-height: 30px;
+                    max-height: 30px;
+                }
+                QPushButton:hover {
+                    background-color: #00CC00;
+                }
+                QPushButton:pressed {
+                    background-color: #008800;
+                }
+            """)
+            
+            self.restart_button.clicked.connect(self.restart_app)
         
         # Headline
         headline = QLabel("Welcome to Metrology, Motors, and More!")
@@ -450,6 +483,31 @@ class MenuPage(QWidget):
             self.main_window.close()
         else:
             # Fallback: quit the application directly
+            from PyQt6.QtWidgets import QApplication
+            QApplication.quit()
+    
+    def restart_app(self):
+        """Restart the entire application (called by restart button in dev mode)"""
+        import sys
+        import os
+        import subprocess
+        
+        # Get the current script path
+        current_script = sys.argv[0]
+        
+        # Close the current application
+        if self.main_window:
+            self.main_window.close()
+        
+        # Restart the application
+        try:
+            # Use subprocess to start a new instance
+            subprocess.Popen([sys.executable, current_script])
+            # Exit the current instance
+            from PyQt6.QtWidgets import QApplication
+            QApplication.quit()
+        except Exception:
+            # Fallback: just quit if restart fails
             from PyQt6.QtWidgets import QApplication
             QApplication.quit()
 

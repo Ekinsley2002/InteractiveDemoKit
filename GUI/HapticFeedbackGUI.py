@@ -81,6 +81,9 @@ class HapticFeedbackPageWidget(QWidget):
         super().__init__(parent)
 
         self.serial_connection = serial_connection
+        
+        # Animation state tracking
+        self.animation_in_progress = False
 
         self.setObjectName("HapticFeedbackPage")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -175,6 +178,19 @@ class HapticFeedbackPageWidget(QWidget):
                     background-color: rgba(255,255,255,0.10);
                 }
             """)
+        
+        # Store button references for enable/disable functionality
+        self.all_buttons = [
+            self.ticks_picker.up_btn if hasattr(self.ticks_picker, 'up_btn') else None,
+            self.ticks_picker.down_btn if hasattr(self.ticks_picker, 'down_btn') else None,
+            self.ticks_picker.add_btn if hasattr(self.ticks_picker, 'add_btn') else None,
+            self.spring_picker.up_btn if hasattr(self.spring_picker, 'up_btn') else None,
+            self.spring_picker.down_btn if hasattr(self.spring_picker, 'down_btn') else None,
+            self.spring_picker.add_btn if hasattr(self.spring_picker, 'add_btn') else None,
+            back_btn
+        ]
+        # Filter out None values
+        self.all_buttons = [btn for btn in self.all_buttons if btn is not None]
 
     # Serial communication helpers
     def _write(self, text: str):
@@ -187,15 +203,33 @@ class HapticFeedbackPageWidget(QWidget):
 
     def _send_num_ticks(self, value: str):
         """Send number of ticks command: n{value}"""
+        if self.animation_in_progress:
+            return
         self._write(f"n{value}\n")
 
     def _send_spring_constant(self, value: str):
         """Send spring constant command: k{value}"""
+        if self.animation_in_progress:
+            return
         self._write(f"k{value}\n")
+    
+    def disable_all_buttons(self):
+        """Disable all buttons during animations"""
+        self.animation_in_progress = True
+        for button in self.all_buttons:
+            button.setEnabled(False)
+    
+    def enable_all_buttons(self):
+        """Enable all buttons after animations complete"""
+        self.animation_in_progress = False
+        for button in self.all_buttons:
+            button.setEnabled(True)
 
     def go_back(self):
         """Emit back signal to return to main menu"""
-                # Send MAIN_MENU command to Arduino to reset it from AFM mode
+        if self.animation_in_progress:
+            return
+        # Send MAIN_MENU command to Arduino to reset it from AFM mode
         self.serial_connection.write(b"M\n")
         self.serial_connection.flush()
         self.back_requested.emit()

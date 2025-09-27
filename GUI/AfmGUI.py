@@ -119,6 +119,9 @@ class AfmPageWidget(QWidget):
         self.RECORD_DURATION = 10
         self.MAX_VALUES_PER_TRIAL = 300
         self.TRIAL_FILE = "trials.txt"
+        
+        # Animation state tracking
+        self.animation_in_progress = False
 
         # GUI setup
         layout = QVBoxLayout(self)
@@ -223,12 +226,16 @@ class AfmPageWidget(QWidget):
         right_layout.setSpacing(10)
 
         self.show_references_button = QPushButton("Reference Samples")
-        self.show_references_button.setObjectName("right_button")
+        self.show_references_button.setObjectName("left_button")
         right_layout.addWidget(self.show_references_button)
 
         self.guess_samples_button = QPushButton("Guess Samples")
-        self.guess_samples_button.setObjectName("right_button")
+        self.guess_samples_button.setObjectName("left_button")
         right_layout.addWidget(self.guess_samples_button)
+
+        self.clear_prev_trial_button = QPushButton("Clear Prev Trial")
+        self.clear_prev_trial_button.setObjectName("left_button")
+        right_layout.addWidget(self.clear_prev_trial_button)
 
         # Add both containers to the button section with proper sizing
         button_layout.addWidget(left_button_container, 1)  # Equal stretch
@@ -250,6 +257,17 @@ class AfmPageWidget(QWidget):
         self.clear_trial_file_button.clicked.connect(self.clear_trial_file)
         self.back_button.clicked.connect(self.go_back)
         self.show_references_button.clicked.connect(self.on_references_button)
+        self.clear_prev_trial_button.clicked.connect(self.clear_prev_trial)
+        
+        # Store button references for enable/disable functionality
+        self.all_buttons = [
+            self.record_button,
+            self.map_button, 
+            self.clear_trial_file_button,
+            self.back_button,
+            self.show_references_button,
+            self.clear_prev_trial_button
+        ]
 
         # Timer setup
         self.timer = QtCore.QTimer()
@@ -282,6 +300,18 @@ class AfmPageWidget(QWidget):
         
         # Add a method to reset animation state
         self._reset_shrink_animation()
+    
+    def disable_all_buttons(self):
+        """Disable all buttons during animations"""
+        self.animation_in_progress = True
+        for button in self.all_buttons:
+            button.setEnabled(False)
+    
+    def enable_all_buttons(self):
+        """Enable all buttons after animations complete"""
+        self.animation_in_progress = False
+        for button in self.all_buttons:
+            button.setEnabled(True)
     
     def _reset_shrink_animation(self):
         """Reset the shrinking circle animation to initial state"""
@@ -339,6 +369,9 @@ class AfmPageWidget(QWidget):
             if self.blue_transition_frame_count >= self.blue_transition_frames:
                 self.blue_transition_timer.stop()
                 self.blue_transition_active = False
+                
+                # Re-enable buttons before emitting back signal
+                self.enable_all_buttons()
                 
                 # Now that the blue circle has filled the screen, emit the back signal
                 # This will trigger the page transition to main menu
@@ -404,6 +437,8 @@ class AfmPageWidget(QWidget):
             self.timer.start(self.TIMER_MS)
 
     def start_recording(self):
+        if self.animation_in_progress:
+            return
         if self.trial_index >= self.MAX_TRIALS:
             return
         self.recording = True
@@ -417,16 +452,48 @@ class AfmPageWidget(QWidget):
         self.trial_index += 1
 
     def clear_trial_file(self):
+        if self.animation_in_progress:
+            return
         with open(self.TRIAL_FILE, "w") as f:
             f.write("")
         self.trial_index = 0
 
+    def clear_prev_trial(self):
+        """Clear the last trial (remove last line from trials.txt)"""
+        if self.animation_in_progress:
+            return
+        
+        try:
+            if os.path.exists(self.TRIAL_FILE):
+                with open(self.TRIAL_FILE, "r") as f:
+                    lines = f.readlines()
+                
+                # Only proceed if there are lines to remove
+                if lines:
+                    # Remove the last line (strip newline and re-add if needed)
+                    lines = lines[:-1]
+                    
+                    # Write back the remaining lines
+                    with open(self.TRIAL_FILE, "w") as f:
+                        f.writelines(lines)
+                    
+                    # Update trial index
+                    self.trial_index = max(0, len(lines))
+                    self.trial_label.setText(f"Current Trial: {self.trial_index} / {self.MAX_TRIALS}")
+        except Exception:
+            # Silently ignore any file operation errors
+            pass
+
     def on_map_button(self):
         """User pressed 'Map' → tell MainWindow to flip pages."""
+        if self.animation_in_progress:
+            return
         self.map_requested.emit()
 
     def on_references_button(self):
         """User pressed 'Show References' → tell MainWindow to show reference page."""
+        if self.animation_in_progress:
+            return
         self.references_requested.emit()
 
     def showEvent(self, event):
@@ -463,6 +530,11 @@ class AfmPageWidget(QWidget):
 
     def go_back(self):
         """User hit Back -> start blue transition animation, then switch to menu."""
+        if self.animation_in_progress:
+            return
+            
+        self.disable_all_buttons()
+        
         # Stop the data stream and reset
         self.timer.stop()
         # Note: Don't send M command here - main.py will handle it

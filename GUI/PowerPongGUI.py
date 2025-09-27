@@ -216,6 +216,21 @@ class PowerPongPageWidget(QWidget):
         css_file = STYLES_DIR / "stylePowerPongPage.qss"
         self.setStyleSheet(css_file.read_text())
         
+        # Store button references for enable/disable functionality
+        self.all_buttons = [
+            self.speed_picker.up_btn if hasattr(self.speed_picker, 'up_btn') else None,
+            self.speed_picker.down_btn if hasattr(self.speed_picker, 'down_btn') else None,
+            self.speed_picker.add_btn if hasattr(self.speed_picker, 'add_btn') else None,
+            self.offset_picker.up_btn if hasattr(self.offset_picker, 'up_btn') else None,
+            self.offset_picker.down_btn if hasattr(self.offset_picker, 'down_btn') else None,
+            self.offset_picker.add_btn if hasattr(self.offset_picker, 'add_btn') else None,
+            fore_btn,
+            zero_btn,
+            back_btn
+        ]
+        # Filter out None values
+        self.all_buttons = [btn for btn in self.all_buttons if btn is not None]
+        
         # Shrinking circle animation
         self.shrinking_circle = True  # Start with white screen
         self.circle_radius = 933  # Start with full screen coverage
@@ -240,6 +255,28 @@ class PowerPongPageWidget(QWidget):
         # Don't create white transition overlay here - wait until needed
         self.white_transition_overlay = None
 
+        self.motorMoving = True
+        
+        # Animation state tracking
+        self.animation_in_progress = False
+
+        # Timer for checking motor status characters
+        self.motor_status_timer = QTimer()
+        self.motor_status_timer.timeout.connect(self.check_for_character)
+        self.motor_status_timer.start(10)  # Check every 50ms
+    
+    def disable_all_buttons(self):
+        """Disable all buttons during animations"""
+        self.animation_in_progress = True
+        for button in self.all_buttons:
+            button.setEnabled(False)
+    
+    def enable_all_buttons(self):
+        """Enable all buttons after animations complete"""
+        self.animation_in_progress = False
+        for button in self.all_buttons:
+            button.setEnabled(True)
+
     # Serial communication helpers
     def _write(self, text: str):
         """
@@ -252,16 +289,24 @@ class PowerPongPageWidget(QWidget):
         self.ser.flush()
 
     def _send_speed(self, value: int):
+        if self.animation_in_progress or self.motorMoving:
+            return
         self._write(f"T{value}\n")
 
     def _send_offset(self, value: int):
+        if self.animation_in_progress or self.motorMoving:
+            return
         self._write(f"O{value}\n")
 
     def _send_fore(self):
+        if self.animation_in_progress or self.motorMoving:
+            return
         self._write("G\n")
 
     def _send_zero_position(self):
         # Send command in SimpleFOC Commander format: "R {offset}"
+        if self.animation_in_progress or self.motorMoving:
+            return
         current_offset = 90
         self._write(f"R{current_offset}\n")
         
@@ -323,12 +368,20 @@ class PowerPongPageWidget(QWidget):
                 self.white_transition_timer.stop()
                 self.white_transition_active = False
                 
+                # Re-enable buttons before emitting back signal
+                self.enable_all_buttons()
+                
                 # Now that the white circle has filled the screen, emit the back signal
                 # This will trigger the page transition to main menu
                 self.back_requested.emit()
                 
     def go_back(self):
         """User hit Back -> start white transition animation, then switch to menu."""
+        if self.animation_in_progress or self.motorMoving:
+            return
+            
+        self.disable_all_buttons()
+        
         # Send MAIN_MENU command to Arduino 
         self.ser.write(b"M\n")
         self.ser.flush()
@@ -366,7 +419,7 @@ class PowerPongPageWidget(QWidget):
     def showEvent(self, event):
         """Override showEvent to trigger the white screen collapse animation"""
         super().showEvent(event)
-        
+
         # Always reset and recreate the overlays when the page is shown
         # This ensures the animations work every time
         
@@ -392,7 +445,17 @@ class PowerPongPageWidget(QWidget):
         self._reset_white_transition()  # Also reset white transition state
         self.shrink_animation_timer.start()
 
-    def check_for_character():
+    def check_for_character(self):
         """Checks serial for characters, used for motor movement"""
-        if ser.in_waiting > 0:
-            data = ser.read().decode('utf-8')
+        if self.ser and self.ser.in_waiting > 0:
+            try:
+                data = self.ser.read().decode('utf-8', errors='ignore')
+                if data == 'Z':
+                    print("HIT CHAR: Motor Moving")
+                    self.motorMoving = True
+                elif data == 'z':
+                    print("HIT CHAR: Motor Not Moving")
+                    self.motorMoving = False
+            except:
+                pass
+            

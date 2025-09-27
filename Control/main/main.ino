@@ -17,7 +17,7 @@ const float ZERO_DEG PROGMEM = 256.00f;
 const float ZERO_RAD PROGMEM = 4.468f; // Pre-calculated: 256 * DEG2RAD
 const float ALPHA PROGMEM = 0.15f;
 
-const float INITIAL_ZERO_R = 4.468f;
+const float INITIAL_ZERO_R = 4.295f;
 
 static float angleFilt = 4.468f; // ZERO_RAD value
 
@@ -49,7 +49,7 @@ const unsigned long MOTOR_STABILIZATION_TIME = 500;
 bool emergencyStop = false;
 
 const char MOTOR_MOVING = 'Z';
-const char MOTOR_NOT_MOVING = 'z'
+const char MOTOR_NOT_MOVING = 'z';
 
 // Navigation command functions will be defined after canTransition()
 
@@ -102,6 +102,8 @@ void goToMainMenu(char* cmd);
 void resetMotorPosition();
 
 float global_zero = INITIAL_ZERO_R; // used by AFM and power pong
+
+const float AFM_ZERO = 4.505f;
 
 // Motor control functions
 void disableMotor() {
@@ -206,9 +208,6 @@ bool canTransition() {
 // Navigation command functions
 void goToAFM(char* cmd) { 
   if (canTransition()) {
-    digitalWrite(ledPin, HIGH);
-    delay(100);
-    digitalWrite(ledPin, LOW);
     currentMode = AFM_MODE;
     lastTransitionTime = millis();
     consecutiveFailures = 0; // Reset on successful transition
@@ -296,6 +295,8 @@ void setup() {
   
   bool 
 
+  resetMotorPosition();
+
   setMotorReady();
 }
 
@@ -321,7 +322,7 @@ void loop() {
     case AFM_MODE:
       if (!afm_initialised) {
         setupAFM();
-        resetMotorPosition();  // ← Move HERE, after setupAFM()
+        resetMotorPosition();  
         afm_initialised = true;
       }
       runAFM();
@@ -374,37 +375,72 @@ void resetMotorPosition() {
   
   // Store original controller type
   MotionControlType originalController = motor.controller;
-  
-  // Switch to torque control and reinitialize
-  motor.controller = MotionControlType::torque;
-  motor.init();
-  motor.initFOC();
-  
-  int rotations = 0;
-  float currentAngle = sensor.getAngle();
-  
-  // Count how many full rotations we've made POSITIVE
-  if(currentAngle > INITIAL_ZERO_R + PI) {
-    while (currentAngle > 2 * PI + INITIAL_ZERO_R) {
-      currentAngle -= 2 * PI;
-      rotations++;
-    }
+
+    // Switch to torque control and reinitialize
+  if (currentMode != AFM_MODE) {
+    motor.controller = MotionControlType::torque;
+    motor.init();
+    motor.initFOC();
   }
 
-  // If spun in negative direction, note rotations
-  else if(currentAngle < INITIAL_ZERO_R - PI) {
-    while(currentAngle < 2 * PI - INITIAL_ZERO_R) {
-      currentAngle += 2 * PI;
-      rotations--;
-    }
-  }
+  int rotations = 0;
+  float currentAngle = sensor.getAngle();
+
+  float newZero;
   
-  // Calculate new zero point accounting for rotations
-  // This ensures we go to the SAME absolute position every time
-  float newZero = INITIAL_ZERO_R + (rotations * 2 * PI);
+  // Count how many full rotations we've made POSITIVE
+
+  if(currentMode != AFM_MODE && currentMode != SPRING_DAMPENER_MODE)
+  {
+    if(currentAngle > INITIAL_ZERO_R + PI) {
+      while (currentAngle > 2 * PI + INITIAL_ZERO_R) {
+        currentAngle -= 2 * PI;
+        rotations++;
+      }
+    }
+
+    // If spun in negative direction, note rotations
+    else if(currentAngle < INITIAL_ZERO_R - PI) {
+      while(currentAngle < 2 * PI - INITIAL_ZERO_R) {
+        currentAngle += 2 * PI;
+        rotations--;
+      }
+    }
+
+    // Calculate new zero point accounting for rotations
+    // This ensures we go to the SAME absolute position every time
+    newZero = INITIAL_ZERO_R + (rotations * 2 * PI);
+  }
+
+  else if(currentMode == AFM_MODE || currentMode == SPRING_DAMPENER_MODE)
+  {
+    if(currentAngle > AFM_ZERO + PI) {
+      while (currentAngle > AFM_ZERO + 2 * PI) {
+        currentAngle -= 2 * PI;
+        rotations++;
+      }
+    }
+  
+    // If spun in negative direction, note rotations
+    else if(currentAngle < AFM_ZERO - PI) {
+      while(currentAngle < AFM_ZERO - 2 * PI) {
+        currentAngle += 2 * PI;
+        rotations--;
+      }
+    }
+  
+    // Calculate new zero point accounting for rotations
+    // This ensures we go to the SAME absolute position every time
+    newZero = AFM_ZERO + (rotations * 2 * PI);
+  }
   
   global_zero = newZero;
 
+  // Do not move the motor for afm mode, just update global position.
+  if(currentMode == AFM_MODE)
+    {
+      return;
+    }
   while (abs(currentAngle - newZero) > 0.01) {
 
     if(currentAngle < newZero) {
@@ -431,11 +467,15 @@ void resetMotorPosition() {
 
 void setupAFM() {
   pinMode(LED_BUILTIN, OUTPUT); digitalWrite(LED_BUILTIN, HIGH);
-  setupMotorForMode(MotionControlType::angle, 6.0f);
+  setupMotorForMode(MotionControlType::angle, 3.0f);
   
   // Configure angle controller specific settings
-  motor.P_angle.P = 30.0f;
-  motor.PID_velocity.P = 0.25f;
+  //motor.P_angle.P = 30.0f;
+  //motor.PID_velocity.P = 0.25f;
+  //motor.PID_velocity.I = 2.0f;
+  //motor.LPF_velocity.Tf = 0.01f;
+  motor.P_angle.P = 25.0f;
+  motor.PID_velocity.P = 0.20f;
   motor.PID_velocity.I = 2.0f;
   motor.LPF_velocity.Tf = 0.01f;
   
@@ -454,7 +494,7 @@ void runAFM() {
       float rawRad = sensor.getAngle();
       float alpha = pgm_read_float(&ALPHA);
       angleFilt = (1.0f - alpha) * angleFilt + alpha * rawRad;
-      float zeroRad = pgm_read_float(&ZERO_RAD);
+      float zeroRad = global_zero;
       float deltaRad = fmodf((zeroRad - angleFilt) + _2PI, _2PI);
       float deltaDeg = deltaRad * _RAD2DEG;
       if (deltaDeg > 100.0f) deltaDeg = 0.0f;

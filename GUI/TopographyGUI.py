@@ -16,6 +16,9 @@ class TopographyPageWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
+        # Animation state tracking
+        self.animation_in_progress = False
+        
         self.setObjectName("TopographyPage")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
@@ -43,6 +46,9 @@ class TopographyPageWidget(QWidget):
         back_btn = QPushButton("Back")
         back_btn.clicked.connect(self.back_requested.emit)
         layout.addWidget(back_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        
+        # Store button references for enable/disable functionality
+        self.all_buttons = [back_btn]
 
         # Color map setup
         cmap = cm.get_cmap("Greens")
@@ -50,6 +56,18 @@ class TopographyPageWidget(QWidget):
 
         self._set_trial_ticks()
         self.load_data()
+    
+    def disable_all_buttons(self):
+        """Disable all buttons during animations"""
+        self.animation_in_progress = True
+        for button in self.all_buttons:
+            button.setEnabled(False)
+    
+    def enable_all_buttons(self):
+        """Enable all buttons after animations complete"""
+        self.animation_in_progress = False
+        for button in self.all_buttons:
+            button.setEnabled(True)
 
     def load_data(self):
         try:
@@ -89,7 +107,9 @@ class TopographyPageWidget(QWidget):
             self.img_item.setImage(img, autoLevels=True)
 
         except Exception:
-            pass
+            # Clear the image when file is empty or invalid
+            empty_img = np.full((MAX_VALUES_PER_TRIAL, MAX_TRIALS), np.nan)
+            self.img_item.setImage(empty_img, autoLevels=True)
 
     def _set_trial_ticks(self):
         """

@@ -17,12 +17,12 @@ QWidget#RightButtonContainer {
 /* Base style for left side buttons */
 QWidget#AfmPage QPushButton#left_button {
     color: #FFFFFF;
-    font: 600 22px "Roboto";
+    font: 600 18px "Roboto";
     background: rgba(255,255,255,0.05);
     border: 2px solid #FAC01A;
     border-radius: 12px;
-    min-width: 400px;
-    max-width: 400px;
+    min-width: 375px;
+    max-width: 375px;
     min-height: 35px;
     max-height: 35px;
     text-align: center;

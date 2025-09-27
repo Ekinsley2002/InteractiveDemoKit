@@ -71,10 +71,17 @@ class MainWindow(QMainWindow):
             }
         """)
         
+        # Animation state tracking
+        self.animation_in_progress = False
+        
+        # Clear data files on startup
+        self.clear_data_files()
+        
         # Startup animation setup
         self.startup_animation = StartupAnimation()
         self.startup_animation.animation_complete.connect(self.transition_to_main_menu)
         self.setCentralWidget(self.startup_animation)
+
         self.startup_animation.start_animation()
 
         # Initialize page references (created after startup animation)
@@ -95,6 +102,13 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.stack)
         self.stack.setCurrentWidget(self.menu_page)
         
+        # Clear data files when entering main menu
+        self.clear_data_files()
+        
+        # Enable all buttons after startup animation completes
+        self.animation_in_progress = False
+        self.enable_all_buttons()
+        
         # Start the yellow circle shrinking animation (coming from startup)
         self.menu_page.start_yellow_circle_animation()
     
@@ -111,6 +125,8 @@ class MainWindow(QMainWindow):
         # navigation wiring
         self.menu_page.afm_btn.clicked.connect(self.show_afm_transition)
         self.menu_page.pwrpng_btn.clicked.connect(self.show_power_pong_transition)
+        self.menu_page.haptic_btn.clicked.connect(self.show_haptic_feedback_transition)
+        self.menu_page.spgdmp_btn.clicked.connect(self.show_spring_dampener_transition)
         self.afm_page.back_requested.connect(
             lambda: self.complete_afm_back_transition()
         )
@@ -144,17 +160,51 @@ class MainWindow(QMainWindow):
         # page 5 → Haptic Feedback
         self.haptic_feedback_page = HapticFeedbackPageWidget(self.ser)
         self.stack.addWidget(self.haptic_feedback_page)
-        self.menu_page.haptic_btn.clicked.connect(self.show_haptic_feedback_transition)
         self.haptic_feedback_page.back_requested.connect(self.haptic_feedback_back)
 
         # page 6 → Spring Dampener Tuning Page
         self.spring_dampener_page = SpringDampenerPageWidget(self.ser)
         self.stack.addWidget(self.spring_dampener_page)
-        self.menu_page.spgdmp_btn.clicked.connect(self.show_spring_dampener_transition)
         self.spring_dampener_page.back_requested.connect(self.spring_dampener_back)
+    
+    def disable_all_buttons(self):
+        """Disable all buttons during transition animations"""
+        if self.menu_page:
+            self.menu_page.afm_btn.setEnabled(False)
+            self.menu_page.pwrpng_btn.setEnabled(False)
+            self.menu_page.haptic_btn.setEnabled(False)
+            self.menu_page.spgdmp_btn.setEnabled(False)
+    
+    def enable_all_buttons(self):
+        """Enable all buttons after transition animations complete"""
+        if self.menu_page:
+            self.menu_page.afm_btn.setEnabled(True)
+            self.menu_page.pwrpng_btn.setEnabled(True)
+            self.menu_page.haptic_btn.setEnabled(True)
+            self.menu_page.spgdmp_btn.setEnabled(True)
+    
+    def clear_data_files(self):
+        """Clear swingData.txt and trials.txt files"""
+        data_files = ["swingData.txt", "trials.txt"]
+        for filename in data_files:
+            try:
+                if os.path.exists(filename):
+                    with open(filename, 'w') as f:
+                        f.write("")  # Clear the file content
+            except Exception:
+                pass  # Silently ignore any file operation errors
+        
+        # Refresh topography page to show empty state
+        if hasattr(self, 'topo_page') and self.topo_page:
+            self.topo_page.refresh()
         
     def show_afm_transition(self):
         """Show AFM transition animation before switching to AFM page"""
+        if self.animation_in_progress:
+            return
+            
+        self.animation_in_progress = True
+        self.disable_all_buttons()
         
         # Send AFM command to Arduino immediately (A = AFM mode)
         self.ser.write(b"A\n")
@@ -184,6 +234,10 @@ class MainWindow(QMainWindow):
         # Switch to AFM page (this will trigger the existing serial communication)
         self.stack.setCurrentWidget(self.afm_page)
         
+        # Re-enable buttons after transition completes
+        self.animation_in_progress = False
+        self.enable_all_buttons()
+        
     def complete_afm_back_transition(self):
         """Called when coming back from AFM page to main menu"""
         # CRITICAL: Clear serial buffers to prevent conflicts
@@ -193,6 +247,9 @@ class MainWindow(QMainWindow):
         except:
             pass
         
+        # Clear data files when returning to main menu
+        self.clear_data_files()
+        
         # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
         
@@ -201,6 +258,11 @@ class MainWindow(QMainWindow):
         
     def show_power_pong_transition(self):
         """Show Power Pong transition animation before switching to Power Pong page"""
+        if self.animation_in_progress:
+            return
+            
+        self.animation_in_progress = True
+        self.disable_all_buttons()
         
         # Send Power Pong command to Arduino immediately (P = Power Pong mode)
         self.ser.write(b"P\n")
@@ -228,10 +290,17 @@ class MainWindow(QMainWindow):
         
         # Switch to Power Pong page
         self.stack.setCurrentWidget(self.power_pong_page)
+        
+        # Re-enable buttons after transition completes
+        self.animation_in_progress = False
+        self.enable_all_buttons()
 
     def complete_power_pong_back_transition(self):
         """Called when coming back from Power Pong page to main menu"""
         # Send MAIN_MENU command to Arduino to reset it from Power Pong mode
+        
+        # Clear data files when returning to main menu
+        self.clear_data_files()
         
         # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
@@ -241,6 +310,11 @@ class MainWindow(QMainWindow):
 
     def show_spring_dampener_transition(self):
         """Show Spring Dampener transition animation before switching to Spring Dampener page"""
+        if self.animation_in_progress:
+            return
+            
+        self.animation_in_progress = True
+        self.disable_all_buttons()
         
         # Clear any leftover serial data from previous modes
         self.ser.reset_input_buffer()
@@ -271,9 +345,18 @@ class MainWindow(QMainWindow):
         
         # Switch to Spring Dampener page
         self.stack.setCurrentWidget(self.spring_dampener_page)
+        
+        # Re-enable buttons after transition completes
+        self.animation_in_progress = False
+        self.enable_all_buttons()
 
     def show_haptic_feedback_transition(self):
         """Show Haptic Feedback transition animation before switching to Haptic Feedback page"""
+        if self.animation_in_progress:
+            return
+            
+        self.animation_in_progress = True
+        self.disable_all_buttons()
         
         # Clear any leftover serial data from previous modes
         self.ser.reset_input_buffer()
@@ -304,11 +387,18 @@ class MainWindow(QMainWindow):
         
         # Switch to Haptic Feedback page
         self.stack.setCurrentWidget(self.haptic_feedback_page)
+        
+        # Re-enable buttons after transition completes
+        self.animation_in_progress = False
+        self.enable_all_buttons()
 
 
 
     def haptic_feedback_back(self):
         """Send stop command to Arduino and return to main menu from Haptic Feedback page"""
+        
+        # Clear data files when returning to main menu
+        self.clear_data_files()
         
         # Send stop command to Arduino (M = main menu mode)
         # Switch back to main menu
@@ -318,6 +408,9 @@ class MainWindow(QMainWindow):
 
     def spring_dampener_back(self):
         """Send stop command to Arduino and return to main menu from Spring Dampener page"""
+        
+        # Clear data files when returning to main menu
+        self.clear_data_files()
         
         # Switch back to main menu
         self.stack.setCurrentWidget(self.menu_page)
