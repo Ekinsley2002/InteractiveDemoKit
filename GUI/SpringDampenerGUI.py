@@ -367,7 +367,7 @@ class SpringDampenerPageWidget(QWidget):
             
             # Create layout for overlay
             overlay_layout = QVBoxLayout(self.graph_overlay)
-            overlay_layout.setContentsMargins(20, 20, 20, 20)
+            overlay_layout.setContentsMargins(10, 10, 10, 10)
             
             # Create title and metrics layout
             title_metrics_layout = QHBoxLayout()
@@ -378,8 +378,8 @@ class SpringDampenerPageWidget(QWidget):
             title_label.setStyleSheet("""
                 QLabel {
                     color: #FAC01A;
-                    font: 600 24px 'Roboto';
-                    margin-bottom: 10px;
+                    font: 600 20px 'Roboto';
+                    margin-bottom: 2px;
                     background-color: transparent;
                     border: none;
                 }
@@ -390,13 +390,13 @@ class SpringDampenerPageWidget(QWidget):
             self.metrics_label.setStyleSheet("""
                 QLabel {
                     color: white;
-                    font: 600 12px 'Roboto';
+                    font: 600 11px 'Roboto';
                     background-color: #002454;
                     border: 2px solid #FAC01A;
-                    border-radius: 8px;
-                    padding: 8px;
-                    min-width: 150px;
-                    max-width: 150px;
+                    border-radius: 6px;
+                    padding: 6px;
+                    min-width: 130px;
+                    max-width: 130px;
                 }
             """)
             self.metrics_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
@@ -408,7 +408,8 @@ class SpringDampenerPageWidget(QWidget):
             overlay_layout.addLayout(title_metrics_layout)
             
             # Create matplotlib figure with dark theme
-            fig = Figure(figsize=(10, 6), facecolor='#002454')
+            fig = Figure(figsize=(9.5, 5.5), facecolor='#002454')
+            fig.subplots_adjust(bottom=0.12, left=0.12, right=0.95, top=0.95)  # Add margins for labels
             ax = fig.add_subplot(111, facecolor='#002454')
             
             # Extract time and position data
@@ -518,34 +519,36 @@ class SpringDampenerPageWidget(QWidget):
                 # Professional grid
                 ax.grid(True, alpha=0.3, color='white', linestyle='-', linewidth=0.5)
                 ax.set_axisbelow(True)
-            
-            # Style the axes
-                ax.tick_params(colors='white', labelsize=12)
-            ax.spines['bottom'].set_color('white')
-            ax.spines['top'].set_color('white') 
-            ax.spines['right'].set_color('white')
-            ax.spines['left'].set_color('white')
                 
-            # Update the metrics label with calculated values
-            metrics_text = f"""Key Metrics: Overshoot: {overshoot:.1f}%Settling Time: {times_clean[-1]:.1f}s"""
-            self.metrics_label.setText(metrics_text)
-            
-            # Compact professional legend
-            legend = ax.legend(loc='upper right', facecolor='#002454', edgecolor='#FAC01A', 
-                                labelcolor='white', framealpha=0.9, fontsize=7, 
-                                markerscale=0.8, handlelength=1.5, handletextpad=0.5)
-            legend.get_frame().set_linewidth(1.5)
-            
-            # Set clean axis limits
-            time_range = times_clean[-1] - times_clean[0]
-            pos_range = max_pos - min_pos
-            
-            ax.set_xlim(times_clean[0] - time_range * 0.02, times_clean[-1] + time_range * 0.02)
-            ax.set_ylim(min_pos - pos_range * 0.05, max_pos + pos_range * 0.05)
-            
-            # Set nice tick intervals
-            ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=8))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
+                # Style the axes
+                ax.tick_params(colors='white', labelsize=12)
+                ax.spines['bottom'].set_color('white')
+                ax.spines['top'].set_color('white') 
+                ax.spines['right'].set_color('white')
+                ax.spines['left'].set_color('white')
+                
+                # Update the metrics label with calculated values
+                metrics_text = f"""Key Metrics:
+Overshoot: {overshoot:.1f}%
+Settling Time: {times_clean[-1]:.1f}s"""
+                self.metrics_label.setText(metrics_text)
+                
+                # Compact professional legend
+                legend = ax.legend(loc='upper right', facecolor='#002454', edgecolor='#FAC01A', 
+                                    labelcolor='white', framealpha=0.9, fontsize=7, 
+                                    markerscale=0.8, handlelength=1.5, handletextpad=0.5)
+                legend.get_frame().set_linewidth(1.5)
+                
+                # Set clean axis limits
+                time_range = times_clean[-1] - times_clean[0]
+                pos_range = max_pos - min_pos
+                
+                ax.set_xlim(times_clean[0] - time_range * 0.02, times_clean[-1] + time_range * 0.02)
+                ax.set_ylim(min_pos - pos_range * 0.05, max_pos + pos_range * 0.05)
+                
+                # Set nice tick intervals
+                ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=8))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
             
             # Add canvas to overlay
             canvas = FigureCanvas(fig)
@@ -557,14 +560,14 @@ class SpringDampenerPageWidget(QWidget):
             back_button.setObjectName("GraphBackBtn")
             back_button.setStyleSheet("""
                 QPushButton#GraphBackBtn {
-                    font: 600 18px 'Roboto';
+                    font: 600 16px 'Roboto';
                     color: #FFFFFF;
                     background-color: rgba(255,255,255,0.05);
                     border: 2px solid #FAC01A;
-                    border-radius: 8px;
-                    padding: 12px 24px;
-                    min-width: 200px;
-                    max-width: 200px;
+                    border-radius: 6px;
+                    padding: 8px 20px;
+                    min-width: 150px;
+                    max-width: 150px;
                 }
                 QPushButton#GraphBackBtn:hover {
                     background-color: rgba(255,255,255,0.10);
