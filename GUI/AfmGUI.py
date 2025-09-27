@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QLabel
 )
 from PyQt6.QtGui import QPainter, QColor, QPen
+from GUI.GuessSamplesGUI import GuessSamplesPageWidget
 
 
 class CircleOverlay(QWidget):
@@ -115,7 +116,7 @@ class AfmPageWidget(QWidget):
         self.DEAD_ZONE = 0.01
         self.LPF_ALPHA = 0.20
 
-        self.MAX_TRIALS = 4
+        self.MAX_TRIALS = 10
         self.RECORD_DURATION = 10
         self.MAX_VALUES_PER_TRIAL = 300
         self.TRIAL_FILE = "trials.txt"
@@ -168,7 +169,7 @@ class AfmPageWidget(QWidget):
         # 3) Create floating trial info container positioned under the back button
         trial_container = QWidget(self)
         trial_container.setObjectName("TrialContainer")
-        trial_container.setFixedSize(150, 60)
+        trial_container.setFixedSize(160, 60)
         trial_container.setStyleSheet("background-color: rgba(0, 36, 84, 0.8); border-radius: 8px;")
         
         # Add trial labels to the container
@@ -257,6 +258,7 @@ class AfmPageWidget(QWidget):
         self.clear_trial_file_button.clicked.connect(self.clear_trial_file)
         self.back_button.clicked.connect(self.go_back)
         self.show_references_button.clicked.connect(self.on_references_button)
+        self.guess_samples_button.clicked.connect(self.on_guess_samples_button)
         self.clear_prev_trial_button.clicked.connect(self.clear_prev_trial)
         
         # Store button references for enable/disable functionality
@@ -266,6 +268,7 @@ class AfmPageWidget(QWidget):
             self.clear_trial_file_button,
             self.back_button,
             self.show_references_button,
+            self.guess_samples_button,
             self.clear_prev_trial_button
         ]
 
@@ -495,6 +498,43 @@ class AfmPageWidget(QWidget):
         if self.animation_in_progress:
             return
         self.references_requested.emit()
+    
+    def on_guess_samples_button(self):
+        """User pressed 'Guess Samples' → show the interactive guessing game."""
+        if self.animation_in_progress:
+            return
+        
+        # Create blue overlay to block AFM view
+        self.guess_overlay = QWidget(self)
+        self.guess_overlay.setGeometry(0, 0, 800, 480)
+        self.guess_overlay.setStyleSheet("""
+            QWidget {
+                background-color: #002454;
+            }
+        """)
+        self.guess_overlay.show()
+        
+        # Create and show the guess samples page
+        self.guess_samples_page = GuessSamplesPageWidget(self)
+        self.guess_samples_page.back_requested.connect(self.on_guess_samples_back)
+        
+        # Show the guess samples page as an overlay
+        self.guess_samples_page.setGeometry(0, 0, 800, 480)
+        self.guess_samples_page.show()
+        self.guess_samples_page.raise_()
+    
+    def on_guess_samples_back(self):
+        """User pressed back from guess samples page."""
+        if hasattr(self, 'guess_samples_page') and self.guess_samples_page:
+            self.guess_samples_page.hide()
+            self.guess_samples_page.deleteLater()
+            self.guess_samples_page = None
+        
+        # Hide the blue overlay
+        if hasattr(self, 'guess_overlay') and self.guess_overlay:
+            self.guess_overlay.hide()
+            self.guess_overlay.deleteLater()
+            self.guess_overlay = None
 
     def showEvent(self, event):
         # Only resume if we're actually becoming the current page (not just briefly shown during transitions)

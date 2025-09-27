@@ -1,5 +1,5 @@
 import os
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QPixmap
 
@@ -20,28 +20,42 @@ class ReferencePageWidget(QWidget):
         layout = QVBoxLayout(self)
         
         # Title
-        title = QLabel("NAU Logo")
+        title = QLabel("Reference Graphs")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("color: #FFFFFF; font: 600 28px 'Roboto'; margin: 20px;")
+        title.setStyleSheet("color: #FAC01A; font: 600 28px 'Roboto'; margin: 20px;")
         layout.addWidget(title)
 
-        # Image container
-        image_label = QLabel()
-        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Create horizontal layout for the three images
+        images_layout = QHBoxLayout()
+        images_layout.setSpacing(20)  # Space between images
         
-        # Load and display the NAU logo
-        image_path = "Images/Ref_Graphs/NAU_LOGO.png"
-        if os.path.exists(image_path):
-            pixmap = QPixmap(image_path)
-            # Scale the image to fit nicely in the layout while maintaining aspect ratio
-            scaled_pixmap = pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            image_label.setPixmap(scaled_pixmap)
-        else:
-            # Fallback if image not found
-            image_label.setText("NAU Logo Image Not Found")
-            image_label.setStyleSheet("color: #FFFFFF; font: 600 18px 'Roboto';")
+        # Image file paths
+        image_files = [
+            "Images/Ref_Graphs/HEXAGONAL.png",
+            "Images/Ref_Graphs/HUMPHREYS.png", 
+            "Images/Ref_Graphs/NAU_LOGO.png"
+        ]
         
-        layout.addWidget(image_label, stretch=1)
+        # Load and display all three images
+        for image_path in image_files:
+            image_label = QLabel()
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            
+            if os.path.exists(image_path):
+                pixmap = QPixmap(image_path)
+                # Scale the image to fit nicely in the layout while maintaining aspect ratio
+                scaled_pixmap = pixmap.scaled(300, 300, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                image_label.setPixmap(scaled_pixmap)
+            else:
+                # Fallback if image not found
+                filename = os.path.basename(image_path)
+                image_label.setText(f"{filename}\nNot Found")
+                image_label.setStyleSheet("color: #FFFFFF; font: 600 14px 'Roboto';")
+            
+            images_layout.addWidget(image_label)
+        
+        # Center the images layout
+        layout.addLayout(images_layout, stretch=1)
 
         # Back button
         back_btn = QPushButton("Back")

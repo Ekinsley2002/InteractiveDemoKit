@@ -7,7 +7,7 @@ from PyQt6.QtCore import pyqtSignal, Qt
 
 TRIAL_FILE = "trials.txt"
 MAX_VALUES_PER_TRIAL = 300
-MAX_TRIALS = 4
+MAX_TRIALS = 10
 
 
 class TopographyPageWidget(QWidget):

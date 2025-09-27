@@ -103,7 +103,7 @@ void resetMotorPosition();
 
 float global_zero = INITIAL_ZERO_R; // used by AFM and power pong
 
-const float AFM_ZERO = 4.505f;
+const float AFM_ZERO = 4.511f;
 
 // Motor control functions
 void disableMotor() {
@@ -329,6 +329,7 @@ void loop() {
       return;
 
     case POWER_PONG_MODE:
+      resetMotorPosition();
       afm_initialised = false;
       runPowerPong();
       resetMotorPosition();  // ← Move HERE, after runPowerPong() sets up motor
@@ -390,7 +391,7 @@ void resetMotorPosition() {
   
   // Count how many full rotations we've made POSITIVE
 
-  if(currentMode != AFM_MODE && currentMode != SPRING_DAMPENER_MODE)
+  if((currentMode != AFM_MODE && currentMode != SPRING_DAMPENER_MODE) || currentMode == POWER_PONG_MODE)
   {
     if(currentAngle > INITIAL_ZERO_R + PI) {
       while (currentAngle > 2 * PI + INITIAL_ZERO_R) {

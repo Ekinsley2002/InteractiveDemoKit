@@ -367,7 +367,8 @@ class SpringDampenerPageWidget(QWidget):
             
             # Create layout for overlay
             overlay_layout = QVBoxLayout(self.graph_overlay)
-            overlay_layout.setContentsMargins(10, 10, 10, 10)
+            overlay_layout.setContentsMargins(8, 8, 8, 8)
+            overlay_layout.setSpacing(5)  # Control spacing between widgets
             
             # Create title and metrics layout
             title_metrics_layout = QHBoxLayout()
@@ -378,8 +379,8 @@ class SpringDampenerPageWidget(QWidget):
             title_label.setStyleSheet("""
                 QLabel {
                     color: #FAC01A;
-                    font: 600 20px 'Roboto';
-                    margin-bottom: 2px;
+                    font: 600 18px 'Roboto';
+                    margin-bottom: 0px;
                     background-color: transparent;
                     border: none;
                 }
@@ -390,13 +391,13 @@ class SpringDampenerPageWidget(QWidget):
             self.metrics_label.setStyleSheet("""
                 QLabel {
                     color: white;
-                    font: 600 11px 'Roboto';
+                    font: 600 10px 'Roboto';
                     background-color: #002454;
                     border: 2px solid #FAC01A;
                     border-radius: 6px;
-                    padding: 6px;
-                    min-width: 130px;
-                    max-width: 130px;
+                    padding: 4px;
+                    min-width: 120px;
+                    max-width: 120px;
                 }
             """)
             self.metrics_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
@@ -408,8 +409,8 @@ class SpringDampenerPageWidget(QWidget):
             overlay_layout.addLayout(title_metrics_layout)
             
             # Create matplotlib figure with dark theme
-            fig = Figure(figsize=(9.5, 5.5), facecolor='#002454')
-            fig.subplots_adjust(bottom=0.12, left=0.12, right=0.95, top=0.95)  # Add margins for labels
+            fig = Figure(figsize=(9.2, 5.2), facecolor='#002454')
+            fig.subplots_adjust(bottom=0.15, left=0.15, right=0.95, top=0.92)  # More margin for axis labels
             ax = fig.add_subplot(111, facecolor='#002454')
             
             # Extract time and position data
@@ -566,8 +567,8 @@ Settling Time: {times_clean[-1]:.1f}s"""
                     border: 2px solid #FAC01A;
                     border-radius: 6px;
                     padding: 8px 20px;
-                    min-width: 150px;
-                    max-width: 150px;
+                    min-width: 50px;
+                    max-width: 50px;
                 }
                 QPushButton#GraphBackBtn:hover {
                     background-color: rgba(255,255,255,0.10);
