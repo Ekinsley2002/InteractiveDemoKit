@@ -388,6 +388,9 @@ class MainWindow(QMainWindow):
         # Switch to Haptic Feedback page
         self.stack.setCurrentWidget(self.haptic_feedback_page)
         
+        # Start the shrinking circle animation to reveal the page
+        self.haptic_feedback_page.start_shrink_animation()
+        
         # Re-enable buttons after transition completes
         self.animation_in_progress = False
         self.enable_all_buttons()
@@ -400,9 +403,11 @@ class MainWindow(QMainWindow):
         # Clear data files when returning to main menu
         self.clear_data_files()
         
-        # Send stop command to Arduino (M = main menu mode)
-        # Switch back to main menu
+        # Switch to main menu page
         self.stack.setCurrentWidget(self.menu_page)
+        
+        # Start the white circle shrinking animation (coming back from Haptic Feedback)
+        self.menu_page.start_white_circle_animation()
 
 
 

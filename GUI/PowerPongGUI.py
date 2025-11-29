@@ -2,11 +2,11 @@ from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore    import Qt, QSize, pyqtSignal, QTimer, QPointF
 from PyQt6.QtGui     import QIcon, QCursor, QPainter, QColor, QPen
+import Config
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMAGES_DIR   = Path("Images")
 STYLES_DIR   = PROJECT_ROOT / "Styles"
-
 
 class Picker(QWidget):
     """One vertical picker column with ▲ / ▼ / Add."""
@@ -255,7 +255,11 @@ class PowerPongPageWidget(QWidget):
         # Don't create white transition overlay here - wait until needed
         self.white_transition_overlay = None
 
-        self.motorMoving = True
+        if(Config.BOARDLESS):
+            self.motorMoving = False
+        
+        else:
+            self.motorMoving = True
         
         # Animation state tracking
         self.animation_in_progress = False
