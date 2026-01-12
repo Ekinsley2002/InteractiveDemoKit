@@ -39,7 +39,6 @@ void doHapticSpringConstant(char* cmd) {
 
 void setupHapticFeedback() {
   setupMotorForMode(MotionControlType::torque, 6.0f);
-  Serial.println(F("Motor ready."));
   _delay(1000);
 }
 
@@ -51,7 +50,6 @@ void hapticFeedbackLoop() {
     last_angle += round(angle_diff / tick_angle) * tick_angle;
     float click_voltage = (angle_diff > 0) ? 2.0 : -2.0;
     motor.move(click_voltage); 
-    Serial.println(F("Haptic tick"));
   } 
   else if (abs(angle_diff) > snap_threshold) {
     float spring_force = -spring_constant * (angle_diff / abs(angle_diff)) * abs(angle_diff); 

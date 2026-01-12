@@ -1,22 +1,18 @@
-/* ── BACKGROUND GRADIENT ─────────────────────────────────────────── */
 QWidget#PowerPongPage {
     background:  #002454
 }
 
-/* ── TITLE ───────────────────────────────────────────────────────── */
 QLabel#Title {
     color:#FFFFFF;
     font:600 60px "Roboto";
 }
 
-/* ── PICKER HEADINGS ─────────────────────────────────────────────── */
 QLabel#PickerTitle {
     color:#FFFFFF;
     font:500 36px "Roboto";
     margin-bottom:16px;
 }
 
-/* ── UNIFIED SQUARE STYLE (arrows & display) ────────────────────── */
 QLabel#ValueDisplay,
 QPushButton#ArrowBtn {           
     min-width:120px;  max-width:120px;
@@ -25,7 +21,6 @@ QPushButton#ArrowBtn {
     border-radius:12px;
 }
 
-/* Value text */
 QLabel#ValueDisplay {
     color:#FFFFFF;
     font:600 30px "Roboto";
@@ -89,7 +84,6 @@ QPushButton#BackBtn {
 QPushButton#BackBtn:hover  { background:rgba(255,255,255,0.10); border-color:#AFC1D6; }
 QPushButton#BackBtn:pressed{ background:rgba(255,255,255,0.14); border-color:#655A7C; }
 
-/* widen everything to 200 px so headings never clip  */
 QLabel#ValueDisplay,
 QPushButton#ArrowBtn,
 QPushButton#AddBtn,
@@ -97,22 +91,19 @@ QLabel#PickerTitle {
     min-width:200px;  max-width:200px;
 }
 
-/* Arrow square now only 64 px tall (keeps compact)   */
 QPushButton#ArrowBtn {
     min-height:64px;  max-height:64px;
     background:transparent;
     border:none;
 }
 
-/* centre the Add label neatly                        */
 QPushButton#AddBtn {
     min-height:44px;  max-height:44px;
 }
 
-/* optional: shrink heading gap back down             */
 QLabel#PickerTitle { margin-bottom:12px; }
 
 QLabel#ValueDisplay {
-    min-width:200px;  max-width:200px;   /* keep the column width     */
-    min-height:64px;  max-height:64px;   /* ↓ this is the key change  */
+    min-width:200px;  max-width:200px;
+    min-height:64px;  max-height:64px;
 }

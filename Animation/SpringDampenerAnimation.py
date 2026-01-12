@@ -62,10 +62,10 @@ class SpringDampenerAnimation(QWidget):
         # Animation timer for loading bar
         self.loading_timer = QTimer()
         self.loading_timer.timeout.connect(self.update_loading_bar)
-        self.loading_timer.setInterval(30)  # Update every 30ms for smooth animation
+        self.loading_timer.setInterval(30) # Unsure whether I should use 30-50, depends on the animation
         
         # Animation properties
-        self.animation_duration = 4000  # 3 seconds in milliseconds
+        self.animation_duration = 4000  # 4 seconds in milliseconds
         self.current_progress = 0
         self.progress_increment = 100 / (self.animation_duration / 30)  # Calculate increment per frame
         

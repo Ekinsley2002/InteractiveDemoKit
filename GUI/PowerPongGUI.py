@@ -7,6 +7,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 IMAGES_DIR   = Path("Images")
 STYLES_DIR   = PROJECT_ROOT / "Styles"
 
+# Multiply the power output by 3
+POWER_SCALE = 3
+
 
 class Picker(QWidget):
     """One vertical picker column with ▲ / ▼ / Add."""
@@ -255,15 +258,21 @@ class PowerPongPageWidget(QWidget):
         # Don't create white transition overlay here - wait until needed
         self.white_transition_overlay = None
 
+        # Motor handling to ensure we dont transition while moving
         self.motorMoving = True
+        self.motor_timeout_timer = QTimer()
+        self.motor_timeout_timer.timeout.connect(self.motor_timout_handling)
+        # Set timeout to 5 seconds (5000 milliseconds)
+        self.motor_timeout_timer.setInterval(4000)
+        #self.motor_timeout_timer.setSingleShot(True)  # Only fires once
         
-        # Animation state tracking
+        self.sending_command = False
+        
         self.animation_in_progress = False
-
-        # Timer for checking motor status characters
+        
         self.motor_status_timer = QTimer()
         self.motor_status_timer.timeout.connect(self.check_for_character)
-        self.motor_status_timer.start(10)  # Check every 50ms
+        self.motor_status_timer.start(10)
     
     def disable_all_buttons(self):
         """Disable all buttons during animations"""
@@ -285,12 +294,17 @@ class PowerPongPageWidget(QWidget):
         if self.ser is None:
             print("→", text.strip())
             return
-        self.ser.write(text.encode())                # includes trailing \n
+            
+        self.sending_command = True
+        self.ser.write(text.encode())
         self.ser.flush()
+        self.sending_command = False
 
     def _send_speed(self, value: int):
         if self.animation_in_progress or self.motorMoving:
             return
+
+        value = value * POWER_SCALE
         self._write(f"T{value}\n")
 
     def _send_offset(self, value: int):
@@ -309,7 +323,12 @@ class PowerPongPageWidget(QWidget):
             return
         current_offset = 90
         self._write(f"R{current_offset}\n")
-        
+
+    def motor_timout_handling(self):
+        """This function is responsible for resetting motor moving flag upon timout"""
+        self.motorMoving = False
+        self.motor_timeout_timer.stop()
+
     # Animation methods
     def _reset_shrink_animation(self):
         """Reset the shrinking circle animation to initial state"""
@@ -340,6 +359,9 @@ class PowerPongPageWidget(QWidget):
                 self.shrink_animation_timer.stop()
                 self.shrinking_circle = False
                 self.circle_overlay.set_animation_state(False)  # Hide the overlay
+        
+        # Using this point as a starting point for the page
+        self.motor_timeout_timer.start()
                 
     def _reset_white_transition(self):
         """Reset the white transition animation to initial state"""
@@ -379,6 +401,10 @@ class PowerPongPageWidget(QWidget):
         """User hit Back -> start white transition animation, then switch to menu."""
         if self.animation_in_progress or self.motorMoving:
             return
+
+        self.motorMoving = True
+
+        self.motor_timeout_timer.stop()
             
         self.disable_all_buttons()
         
@@ -446,16 +472,21 @@ class PowerPongPageWidget(QWidget):
         self.shrink_animation_timer.start()
 
     def check_for_character(self):
-        """Checks serial for characters, used for motor movement"""
+        """Check for motor status characters from Arduino"""
+        if self.sending_command:
+            return
+            
         if self.ser and self.ser.in_waiting > 0:
             try:
                 data = self.ser.read().decode('utf-8', errors='ignore')
                 if data == 'Z':
-                    print("HIT CHAR: Motor Moving")
+                    print("Motor moving")
                     self.motorMoving = True
+                    self.motor_timeout_timer.start()
                 elif data == 'z':
-                    print("HIT CHAR: Motor Not Moving")
+                    print("Motor NOT moving")
                     self.motorMoving = False
+                    self.motor_timeout_timer.stop() 
             except:
                 pass
             

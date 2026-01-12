@@ -37,16 +37,11 @@ int ledPin = 9;
 // Motor overload detection variables
 unsigned long lastTransitionTime = 0;
 const unsigned long MIN_TRANSITION_INTERVAL = 2000;
-int consecutiveFailures = 0;
-const int MAX_CONSECUTIVE_FAILURES = 3;
 
 // Motor ready state verification
 bool motorReady = true;
 unsigned long motorReadyTime = 0;
 const unsigned long MOTOR_STABILIZATION_TIME = 500;
-
-// EMERGENCY FAILSAFE SYSTEM
-bool emergencyStop = false;
 
 const char MOTOR_MOVING = 'Z';
 const char MOTOR_NOT_MOVING = 'z';
@@ -74,23 +69,9 @@ void doHapticSpringConstant(char* cmd);
 void cleanupHapticFeedback();
 void cleanupSpringDampener();
 
-// Motor control functions
-void disableMotor();
-bool checkMotorOverload();
-void handleTransitionOverload();
-bool canTransition();
-void setMotorNotReady();
-void setMotorReady();
-bool isMotorReady();
-void forceMainMenuReset();
-
 // Shared motor setup functions to reduce code duplication
 void setupMotorForMode(MotionControlType controller_type, float voltage_limit = 6.0f);
 void cleanupMotorForMode();
-
-// EMERGENCY FAILSAFE FUNCTIONS
-void emergencyMotorStop();
-bool checkEmergencyConditions();
 
 // Forward declarations for navigation functions
 void goToAFM(char* cmd);
@@ -105,163 +86,46 @@ float global_zero = INITIAL_ZERO_R; // used by AFM and power pong
 
 const float AFM_ZERO = 4.511f;
 
-// Motor control functions
-void disableMotor() {
-  if (motor.driver != nullptr) {
-    motor.move(0);
-    motor.disable();
-    delay(300);
-    motor.target = 0;
-    motor.voltage.q = 0;
-    motor.voltage.d = 0;
-    motor.PID_velocity.reset();
-    motor.P_angle.reset();
-    motor.controller = MotionControlType::torque;
-    delay(100);
-  }
-  setMotorNotReady();
-}
-
-void setMotorNotReady() {
-  motorReady = false;
-  motorReadyTime = 0;
-}
-
-void setMotorReady() {
-  motorReady = true;
-  motorReadyTime = millis();
-}
-
-bool isMotorReady() {
-  if (!motorReady) return false;
-  return (millis() - motorReadyTime) >= MOTOR_STABILIZATION_TIME;
-}
-
-void forceMainMenuReset() {
-  disableMotor();
-  delay(1000);
-  setMotorReady();
-}
-
-// EMERGENCY FAILSAFE FUNCTIONS
-void emergencyMotorStop() {
-  if (motor.driver != nullptr) {
-    motor.move(0);
-    motor.disable();
-    driver.disable();
-    motor.target = 0;
-    motor.voltage.q = 0;
-    motor.voltage.d = 0;
-  }
-  emergencyStop = true;
-}
-
-bool checkEmergencyConditions() {
-  if (motor.driver != nullptr) {
-    if (abs(motor.voltage.q) > motor.voltage_limit * 0.95) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool checkMotorOverload() {
-  // Simple overload check - just voltage limit
-  if (motor.driver != nullptr) {
-    if (abs(motor.voltage.q) > motor.voltage_limit * 0.9) {
-      return true;
-    }
-  }
-  return false;
-}
-
-void handleTransitionOverload() {
-  consecutiveFailures++;
-  delay(1000 * consecutiveFailures);
-  if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-    consecutiveFailures = 0;
-  }
-}
-
-bool canTransition() {
-  unsigned long now = millis();
-  if (now - lastTransitionTime < MIN_TRANSITION_INTERVAL) {
-    delay(MIN_TRANSITION_INTERVAL - (now - lastTransitionTime));
-  }
-  if (checkMotorOverload()) {
-    handleTransitionOverload();
-    return false;
-  }
-  // Only block if motor is completely not ready (not just not stabilized)
-  if (!motorReady) {
-    return false;
-  }
-  // Extra safety: if coming from main menu, ensure reset is complete
-  if (currentMode == MAIN_MENU) {
-    if (now - lastTransitionTime < 2000) {  // Wait 2 seconds after main menu reset
-      return false;
-    }
-  }
-  return true;
-}
-
 // Navigation command functions
 void goToAFM(char* cmd) { 
-  if (canTransition()) {
     currentMode = AFM_MODE;
     lastTransitionTime = millis();
-    consecutiveFailures = 0; // Reset on successful transition
-  }
 }
 
 void goToPowerPong(char* cmd) { 
-  if (canTransition()) {
     digitalWrite(ledPin, HIGH);
     delay(100);
     digitalWrite(ledPin, LOW);
     currentMode = POWER_PONG_MODE;
     lastTransitionTime = millis();
-    consecutiveFailures = 0;
-  }
 }
 
 void goToHapticFeedback(char* cmd) { 
-  if (canTransition()) {
     digitalWrite(ledPin, HIGH);
     delay(100);
     digitalWrite(ledPin, LOW);
     currentMode = HAPTIC_FEEDBACK_MODE;
     lastTransitionTime = millis();
-    consecutiveFailures = 0;
-  }
 }
 
+
 void goToSpringDampener(char* cmd) { 
-  if (canTransition()) {
+
     digitalWrite(ledPin, HIGH);
     delay(100);
     digitalWrite(ledPin, LOW);
     currentMode = SPRING_DAMPENER_MODE;
     lastTransitionTime = millis();
-    consecutiveFailures = 0;
-  }
 }
 
 void goToMainMenu(char* cmd) { 
-  if (canTransition()) {
     digitalWrite(ledPin, HIGH);
     delay(100);
     digitalWrite(ledPin, LOW);
-    
-    // Force complete motor reset when going to main menu
-    forceMainMenuReset();
-    
+    resetMotorPosition();
     currentMode = MAIN_MENU;
     lastTransitionTime = millis();
-    consecutiveFailures = 0;
-  }
 }
-
 
 void setup() {
   Serial.begin(115200);
@@ -296,20 +160,10 @@ void setup() {
   bool 
 
   resetMotorPosition();
-
-  setMotorReady();
 }
 
 void loop() {
   static bool afm_initialised = false;
-  
-  // EMERGENCY FAILSAFE CHECK
-  if (checkEmergencyConditions()) {
-    emergencyMotorStop();
-    currentMode = MAIN_MENU;
-    setMotorNotReady();
-  }
-
   switch (currentMode) {
     case MAIN_MENU:
       afm_initialised = false;
@@ -520,7 +374,6 @@ void runPowerPong() {
 void setupMotorForMode(MotionControlType controller_type, float voltage_limit) {
   pinMode(7, OUTPUT);
   digitalWrite(7, LOW);
-  disableMotor();
   sensor.init();
   motor.linkSensor(&sensor);
   driver.voltage_power_supply = 12;
@@ -538,7 +391,6 @@ void setupMotorForMode(MotionControlType controller_type, float voltage_limit) {
   motor.voltage.q = 0;
   motor.voltage.d = 0;
   delay(500);
-  setMotorReady();
 }
 
 void cleanupMotorForMode() {

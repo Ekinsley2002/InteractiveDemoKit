@@ -1,7 +1,7 @@
 import os, sys, pathlib, serial, time
 import Config
 
-# DPI / Scale settings - must be set before QApplication exists
+# This is a universal way to set the DPI / Scale settings.
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
 os.environ["QT_SCALE_FACTOR"]            = "1"
 os.environ["QT_ENABLE_HIGHDPI_SCALING"]  = "0"
@@ -9,14 +9,14 @@ os.environ["QT_ENABLE_HIGHDPI_SCALING"]  = "0"
 from pathlib import Path
 import os
 
+# This is a univeral way to set the working directory.
 APP_DIR = Path(__file__).resolve().parent
-os.chdir(APP_DIR)  # make relative paths resolve from project root
+os.chdir(APP_DIR)
 
 
 from PyQt6.QtCore import Qt, QCoreApplication, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt6.QtGui import QCursor
-
 from GUI.MainMenuGUI   import MenuPage
 from GUI.AfmGUI        import AfmPageWidget
 from GUI.TopographyGUI import TopographyPageWidget
@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
 
         self.BAUD = 115_200
         
-        # Platform-specific port configuration
+        # Platform-specific port configuration (Changed in Config.py)
         if Config.DEVICE == "Mac":
             self.PORT = "/dev/cu.usbmodem14101"
         elif Config.DEVICE == "Linux":
@@ -48,7 +48,7 @@ class MainWindow(QMainWindow):
         elif Config.DEVICE == "Windows":
             self.PORT = "COM4"
 
-        # Serial connection setup
+        # Serial connection setup (if boardless keeps a placeholde serial connection)
         if Config.BOARDLESS:
             self.ser = serial.serial_for_url("loop://", timeout=1)
         else:
@@ -114,15 +114,9 @@ class MainWindow(QMainWindow):
     
     def create_main_menu_pages(self):
         """Create all main menu pages and set up navigation"""
-        # page 0 → main menu
-        self.menu_page = MenuPage(self.ser, self)  # Pass self (MainWindow) as parent
-        self.stack.addWidget(self.menu_page)
 
-        # page 1 → AFM live-plot
-        self.afm_page = AfmPageWidget(self.ser)
-        self.stack.addWidget(self.afm_page)
 
-        # navigation wiring
+        # navigation wiring (connects the buttons to the transition functions)
         self.menu_page.afm_btn.clicked.connect(self.show_afm_transition)
         self.menu_page.pwrpng_btn.clicked.connect(self.show_power_pong_transition)
         self.menu_page.haptic_btn.clicked.connect(self.show_haptic_feedback_transition)
@@ -130,6 +124,14 @@ class MainWindow(QMainWindow):
         self.afm_page.back_requested.connect(
             lambda: self.complete_afm_back_transition()
         )
+
+        # page 0 - main menu
+        self.menu_page = MenuPage(self.ser, self)  # Pass self (MainWindow) as parent
+        self.stack.addWidget(self.menu_page)
+
+        # page 1 - AFM live-plot
+        self.afm_page = AfmPageWidget(self.ser)
+        self.stack.addWidget(self.afm_page)
 
         # page 2 → Topography
         self.topo_page = TopographyPageWidget()
@@ -184,7 +186,7 @@ class MainWindow(QMainWindow):
             self.menu_page.spgdmp_btn.setEnabled(True)
     
     def clear_data_files(self):
-        """Clear swingData.txt and trials.txt files"""
+        """Clear swingData.txt and trials.txt files once we go back to the main menu"""
         data_files = ["swingData.txt", "trials.txt"]
         for filename in data_files:
             try:
@@ -423,6 +425,6 @@ def main():
     window.show()
     sys.exit(app.exec())
 
-
+# Only ever run the main file, nothing else.
 if __name__ == "__main__":
     main()

@@ -7,8 +7,8 @@ from PyQt6.QtGui import QPainter, QPen, QColor, QPainterPath
 
 class GraphingLineAnimation(QWidget):
     """
-    Animation that shows a jagged black line moving from left to right across the screen,
-    simulating real-time graphing on a blue background.
+    Animation that shows a smooth white line moving from left to right across the screen,
+    This is just a loading line to show the user the device is setting up (ensuring not states being crossed in arduino)
     """
     
     animation_complete = pyqtSignal()
@@ -47,13 +47,13 @@ class GraphingLineAnimation(QWidget):
         # Animation properties
         self.animation_timer = QTimer()
         self.animation_timer.timeout.connect(self.update_animation)
-        self.animation_timer.setInterval(50)  # 20 FPS for smooth animation
+        self.animation_timer.setInterval(50)  # 50 FPS for smooth animation
         
         # Line drawing properties
         self.line_points = []
         self.current_x = 0
-        self.line_speed = 15  # pixels per frame - much faster!
-        self.max_points = 800 // self.line_speed  # How many points to store
+        self.line_speed = 15 
+        self.max_points = 800 // self.line_speed
         
         # Line style
         self.line_pen = QPen(QColor(255, 255, 255), 6, Qt.PenStyle.SolidLine)
@@ -386,24 +386,6 @@ class GraphingLineAnimation(QWidget):
         
         # Restore the painter state
         painter.restore()
-        
-        # Debug visualization - draw probe tip position and wave contact point
-        if hasattr(self, 'debug_mode') and self.debug_mode:
-            # Draw probe tip position
-            tip_x, tip_y = self.calculate_probe_tip_position()
-            painter.setPen(QPen(QColor(255, 0, 0), 3))  # Red pen
-            painter.setBrush(QColor(255, 0, 0))
-            painter.drawEllipse(QPointF(tip_x, tip_y), 5, 5)
-            
-            # Draw wave contact point
-            wave_y_at_tip = self.get_wave_y_at_x(tip_x)
-            painter.setPen(QPen(QColor(0, 255, 0), 3))  # Green pen
-            painter.setBrush(QColor(0, 255, 0))
-            painter.drawEllipse(QPointF(tip_x, wave_y_at_tip), 5, 5)
-            
-            # Draw line between tip and wave
-            painter.setPen(QPen(QColor(255, 255, 0), 2))  # Yellow line
-            painter.drawLine(int(tip_x), int(tip_y), int(tip_x), int(wave_y_at_tip))
     
     def get_wave_y_at_x(self, x):
         """Get the wave Y position at a specific X coordinate"""

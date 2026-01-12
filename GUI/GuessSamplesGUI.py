@@ -304,7 +304,7 @@ class GuessSamplesPageWidget(QWidget):
                 correct_count += 1
         
         if correct_count == total_count:
-            self.feedback_label.setText("🎉 Perfect! All matches are correct!")
+            self.feedback_label.setText("Perfect! All matches are correct!")
             self.feedback_label.setStyleSheet("""
                 QLabel {
                     color: #00FF00;
@@ -315,7 +315,7 @@ class GuessSamplesPageWidget(QWidget):
             """)
             self.guess_button.setEnabled(False)
         else:
-            self.feedback_label.setText(f"❌ {correct_count}/{total_count} correct. Try again!")
+            self.feedback_label.setText(f"{correct_count}/{total_count} correct. Try again!")
             self.feedback_label.setStyleSheet("""
                 QLabel {
                     color: #FF6B6B;

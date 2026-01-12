@@ -60,7 +60,6 @@ bool powerPongLoop() {
   return true;
 }
 
-
 void doMove270(char* cmd) {
   Serial.println(MOTOR_MOVING);
   float swing_finish = zero_point + 1;
@@ -78,6 +77,8 @@ void doMove270(char* cmd) {
     motor.loopFOC();
   }
   motor.move(0);
+
+  zero_point = sensor.getAngle();
   Serial.println(MOTOR_NOT_MOVING);
 }
 
